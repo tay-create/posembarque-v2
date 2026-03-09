@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão de Cadastros | Transnet</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <style>
+        body { background-color: #0b0e14; }
+        .glass-panel { background: #1e293b; border: 1px solid #334155; }
+        .neon-text-blue { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+    </style>
+</head>
+<body class="text-slate-200 p-6 min-h-screen">
+
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="text-2xl font-black italic uppercase text-slate-100 neon-text-blue">
+                    GESTÃO DE <span class="text-blue-500">CADASTROS</span>
+                </h1>
+                <p class="text-xs text-slate-500 font-bold">Padronização de Motoristas e Clientes</p>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
+                <i data-lucide="arrow-left" size="18"></i> Voltar ao Painel
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div class="glass-panel p-6 rounded-2xl shadow-xl">
+                <h2 class="text-xl font-bold text-orange-500 mb-4 flex items-center gap-2 uppercase">
+                    <i data-lucide="truck" size="24"></i> Motoristas
+                </h2>
+                
+                <form action="{{ url_for('adicionar_item') }}" method="POST" class="flex gap-2 mb-6">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="tipo" value="motorista">
+                    <input type="text" name="nome" required placeholder="Nome do Motorista..." 
+                           class="flex-1 bg-slate-900 border border-slate-600 text-white p-3 rounded-xl outline-none focus:border-orange-500 uppercase">
+                    <button type="submit" class="bg-orange-600 hover:bg-orange-500 text-white px-4 rounded-xl font-bold">
+                        <i data-lucide="plus" size="24"></i>
+                    </button>
+                </form>
+
+                <div class="h-96 overflow-y-auto pr-2 space-y-2">
+                    {% for m in motoristas %}
+                    <div class="bg-slate-900/50 p-3 rounded-lg flex justify-between items-center group hover:bg-slate-800 border border-transparent hover:border-slate-600 transition-all">
+                        <span class="font-mono text-sm font-bold text-slate-300">{{ m }}</span>
+                        <a href="{{ url_for('remover_item', tipo='motorista', nome=m) }}" class="text-slate-600 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="trash-2" size="18"></i>
+                        </a>
+                    </div>
+                    {% else %}
+                    <p class="text-center text-slate-600 text-sm py-10">Nenhum motorista cadastrado.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl shadow-xl">
+                <h2 class="text-xl font-bold text-emerald-500 mb-4 flex items-center gap-2 uppercase">
+                    <i data-lucide="briefcase" size="24"></i> Clientes
+                </h2>
+
+                <form action="{{ url_for('adicionar_item') }}" method="POST" class="flex gap-2 mb-6">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="tipo" value="cliente">
+                    <input type="text" name="nome" required placeholder="Nome do Cliente..." 
+                           class="flex-1 bg-slate-900 border border-slate-600 text-white p-3 rounded-xl outline-none focus:border-emerald-500 uppercase">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 rounded-xl font-bold">
+                        <i data-lucide="plus" size="24"></i>
+                    </button>
+                </form>
+
+                <div class="h-96 overflow-y-auto pr-2 space-y-2">
+                    {% for c in clientes %}
+                    <div class="bg-slate-900/50 p-3 rounded-lg flex justify-between items-center group hover:bg-slate-800 border border-transparent hover:border-slate-600 transition-all">
+                        <span class="font-mono text-sm font-bold text-slate-300">{{ c }}</span>
+                        <a href="{{ url_for('remover_item', tipo='cliente', nome=c) }}" class="text-slate-600 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="trash-2" size="18"></i>
+                        </a>
+                    </div>
+                    {% else %}
+                    <p class="text-center text-slate-600 text-sm py-10">Nenhum cliente cadastrado.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

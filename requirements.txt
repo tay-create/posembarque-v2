@@ -1,0 +1,14 @@
+flask
+flask-login
+flask-mail
+flask-limiter
+flask-wtf
+bcrypt
+pdfkit
+pandas
+openpyxl
+werkzeug
+reportlab
+matplotlib
+psycopg2-binary
+python-dotenv

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório TRANSNET</title>
+    <style>
+        /* PDF Formato Paisagem Nativo */
+        @page {
+            size: A4 landscape;
+            margin: 10mm;
+
+            @bottom-right {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: Arial, sans-serif;
+                font-size: 9px;
+                color: #64748b;
+            }
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            color: #1e293b;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+            text-transform: uppercase;
+        }
+
+        /* Tabela Ultra-Compacta */
+        table.tabela-dados {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            font-size: 7.5px;
+            margin-bottom: 20px;
+        }
+
+        /* Repetição do cabeçalho em cada página */
+        thead {
+            display: table-header-group;
+        }
+
+        tbody {
+            display: table-row-group;
+        }
+
+        tr {
+            page-break-inside: avoid;
+        }
+
+        table.tabela-dados th,
+        table.tabela-dados td {
+            padding: 6px 4px;
+            border: 1px solid #cbd5e1;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .cabecalho-tabela th {
+            background-color: #1e293b;
+            color: #ffffff;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        table.tabela-dados tbody tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        /* Colunas (nova ordem: datas agrupadas) */
+        .col-dt {
+            width: 6%;
+        }
+
+        .col-hr {
+            width: 4%;
+        }
+
+        .col-dfim {
+            width: 6%;
+        }
+
+        .col-hfim {
+            width: 4%;
+        }
+
+        .col-mot {
+            width: 10%;
+        }
+
+        .col-mod {
+            width: 6%;
+        }
+
+        .col-cte {
+            width: 6%;
+        }
+
+        .col-op {
+            width: 6%;
+        }
+
+        .col-nfs {
+            width: 6%;
+        }
+
+        .col-cli {
+            width: 11%;
+        }
+
+        .col-cid {
+            width: 9%;
+        }
+
+        .col-mtv {
+            width: 14%;
+        }
+
+        .col-sit {
+            width: 12%;
+        }
+
+        .status-atrasado {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .status-resolvido {
+            color: #16a34a;
+            font-weight: bold;
+        }
+
+        .status-resolvido-atrasado {
+            color: #d97706;
+            font-weight: bold;
+        }
+
+        /* Área de Gráficos */
+        .page-break {
+            page-break-before: always;
+        }
+
+        .grafico-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .grafico-container img {
+            max-width: 70%;
+            max-height: 400px;
+        }
+
+        .grafico-titulo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 20px;
+        }
+
+        .dash-cards {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .card {
+            border: 2px solid #e2e8f0;
+            padding: 20px 40px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .card-num {
+            font-size: 40px;
+            font-weight: 900;
+        }
+
+        .card-blue {
+            color: #2563eb;
+        }
+
+        .card-red {
+            color: #dc2626;
+        }
+
+        .card-green {
+            color: #16a34a;
+        }
+
+        /* Cabeçalho no thead - sem borda para não conflitar */
+        .header-row th {
+            background-color: white !important;
+            border: none !important;
+            padding: 0 !important;
+            padding-bottom: 8px !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <table class="tabela-dados">
+        <thead>
+            <!-- Cabeçalho Institucional (repete em cada página) -->
+            <tr class="header-row">
+                <th colspan="13" style="padding-bottom: 10px !important;">
+                    <table
+                        style="width: 100%; border-bottom: 2px solid #2563eb; margin-bottom: 10px; border-collapse: collapse; background: white;">
+                        <tr>
+                            <td style="text-align: left; padding: 0; padding-bottom: 5px; border: none;">
+                                <span
+                                    style="font-size: 24px; font-weight: 900; font-style: italic; color: #0f172a;">TRANS<span
+                                        style="color: #2563eb;">NET</span></span><br>
+                                <span
+                                    style="font-size: 8px; font-weight: bold; color: #64748b; letter-spacing: 2px; text-transform: uppercase;">Logística
+                                    Operacional</span>
+                            </td>
+                            <td
+                                style="text-align: right; padding: 0; padding-bottom: 5px; border: none; vertical-align: bottom;">
+                                <div
+                                    style="font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 4px; text-transform: uppercase;">
+                                    RELATÓRIO CONSOLIDADO E ATRASOS</div>
+                                <div style="font-size: 9px; color: #64748b; text-transform: uppercase;">GERADO EM: {{
+                                    data_geracao }}</div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div
+                        style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; font-size: 9px; text-align: left; font-weight: normal; color: #1e293b; text-transform: uppercase;">
+                        <strong>FILTROS:</strong> {{ filtros_texto }}
+                    </div>
+                </th>
+            </tr>
+            <!-- Cabeçalho da Tabela (nova ordem) -->
+            <tr class="cabecalho-tabela">
+                <th class="col-dt">DATA INÍCIO</th>
+                <th class="col-hr">HORA</th>
+                <th class="col-dfim">DATA FIM</th>
+                <th class="col-hfim">HR FIM</th>
+                <th class="col-mot">MOTORISTA</th>
+                <th class="col-mod">MODAL.</th>
+                <th class="col-cte">CTE</th>
+                <th class="col-op">OPERAÇÃO</th>
+                <th class="col-nfs">NF'S</th>
+                <th class="col-cli">CLIENTE</th>
+                <th class="col-cid">CIDADE</th>
+                <th class="col-mtv">MOTIVO</th>
+                <th class="col-sit">SITUAÇÃO</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in dados %}
+            <tr>
+                <td>{{ row.data_ocorrencia }}</td>
+                <td>{{ row.hora_ocorrencia }}</td>
+                <td>{{ row.data_conclusao }}</td>
+                <td>{{ row.hora_conclusao }}</td>
+                <td>{{ row.motorista }}</td>
+                <td>{{ row.modalidade }}</td>
+                <td>{{ row.cte }}</td>
+                <td>{{ row.operacao }}</td>
+                <td>{{ row.nfs }}</td>
+                <td>{{ row.cliente }}</td>
+                <td>{{ row.cidade }}</td>
+                <td>{{ row.motivo }}</td>
+                <td
+                    class="{% if 'ATRASADO' in row.status_display and 'RESOLVIDO' in row.status_display %}status-resolvido-atrasado{% elif 'ATRASADO' in row.status_display %}status-atrasado{% else %}status-resolvido{% endif %}">
+                    {{ row.status_display }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="13" style="text-align: center; padding: 20px;">NENHUMA OCORRÊNCIA ENCONTRADA.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if img_ops %}
+    <div class="page-break"></div>
+    <table style="width: 100%; border-bottom: 2px solid #2563eb; margin-bottom: 10px; border-collapse: collapse;">
+        <tr>
+            <td style="text-align: left; padding: 0; padding-bottom: 5px; border: none;">
+                <span style="font-size: 24px; font-weight: 900; font-style: italic; color: #0f172a;">TRANS<span
+                        style="color: #2563eb;">NET</span></span><br>
+                <span style="font-size: 8px; font-weight: bold; color: #64748b; letter-spacing: 2px;">Logística
+                    Operacional</span>
+            </td>
+            <td style="text-align: right; padding: 0; padding-bottom: 5px; border: none; vertical-align: bottom;">
+                <div style="font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 4px;">RELATÓRIO
+                    CONSOLIDADO E ATRASOS</div>
+                <div style="font-size: 9px; color: #64748b;">GERADO EM: {{ data_geracao }}</div>
+            </td>
+        </tr>
+    </table>
+    <div class="grafico-container">
+        <div class="grafico-titulo">VOLUME POR OPERAÇÃO</div>
+        <img src="{{ img_ops }}">
+    </div>
+    {% endif %}
+
+    {% if img_sla %}
+    <div class="page-break"></div>
+    <table style="width: 100%; border-bottom: 2px solid #2563eb; margin-bottom: 10px; border-collapse: collapse;">
+        <tr>
+            <td style="text-align: left; padding: 0; padding-bottom: 5px; border: none;">
+                <span style="font-size: 24px; font-weight: 900; font-style: italic; color: #0f172a;">TRANS<span
+                        style="color: #2563eb;">NET</span></span><br>
+                <span style="font-size: 8px; font-weight: bold; color: #64748b; letter-spacing: 2px;">Logística
+                    Operacional</span>
+            </td>
+            <td style="text-align: right; padding: 0; padding-bottom: 5px; border: none; vertical-align: bottom;">
+                <div style="font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 4px;">RELATÓRIO
+                    CONSOLIDADO E ATRASOS</div>
+                <div style="font-size: 9px; color: #64748b;">GERADO EM: {{ data_geracao }}</div>
+            </td>
+        </tr>
+    </table>
+    <div class="grafico-container">
+        <div class="grafico-titulo">RESOLVIDAS X ATRASADAS (>24H)</div>
+        <img src="{{ img_sla }}">
+
+        <div class="dash-cards">
+            <div class="card">
+                <div class="card-num card-blue">{{ total_ops }}</div>
+                <div style="font-size: 12px; font-weight: bold; color: #64748b;">TOTAL DE OPERAÇÕES</div>
+            </div>
+            <div class="card">
+                <div class="card-num card-green">{{ total_resolvidas }}</div>
+                <div style="font-size: 12px; font-weight: bold; color: #64748b;">RESOLVIDAS</div>
+            </div>
+            <div class="card">
+                <div class="card-num card-red">{{ total_atrasadas }}</div>
+                <div style="font-size: 12px; font-weight: bold; color: #64748b;">PASSARAM DE 24H</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if img_mot %}
+    <div class="page-break"></div>
+    <table style="width: 100%; border-bottom: 2px solid #2563eb; margin-bottom: 10px; border-collapse: collapse;">
+        <tr>
+            <td style="text-align: left; padding: 0; padding-bottom: 5px; border: none;">
+                <span style="font-size: 24px; font-weight: 900; font-style: italic; color: #0f172a;">TRANS<span
+                        style="color: #2563eb;">NET</span></span><br>
+                <span style="font-size: 8px; font-weight: bold; color: #64748b; letter-spacing: 2px;">Logística
+                    Operacional</span>
+            </td>
+            <td style="text-align: right; padding: 0; padding-bottom: 5px; border: none; vertical-align: bottom;">
+                <div style="font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 4px;">RELATÓRIO
+                    CONSOLIDADO E ATRASOS</div>
+                <div style="font-size: 9px; color: #64748b;">GERADO EM: {{ data_geracao }}</div>
+            </td>
+        </tr>
+    </table>
+    <div class="grafico-container">
+        <div class="grafico-titulo">TOP 5 MOTIVOS DE OCORRÊNCIAS</div>
+        <img src="{{ img_mot }}">
+    </div>
+    {% endif %}
+
+</body>
+
+</html>

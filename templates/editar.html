@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Ocorrência</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <style>body { background-color: #0b0e14; }</style>
+</head>
+<body class="text-slate-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-700 relative">
+
+        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+            <div>
+                <h2 class="text-2xl font-black italic text-white uppercase">Editar <span class="text-orange-500">Registro #{{ dado.id }}</span></h2>
+                <p class="text-[10px] text-slate-500 font-bold uppercase mt-1">Alteração Gerencial Protegida</p>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-bold">
+                <i data-lucide="x" size="20"></i> Cancelar
+            </a>
+        </div>
+
+        <form action="{{ url_for('atualizar', id=dado.id) }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <input type="hidden" name="responsavel" value="{{ dado.responsavel }}">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Data Ocorrência</label>
+                <input type="date" name="data" value="{{ dado.data_ocorrencia }}" required class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-orange-500 outline-none">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Operação</label>
+                <select name="operacao" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-orange-500 outline-none font-bold">
+                    <option value="Delta" {% if dado.operacao == 'Delta' %}selected{% endif %}>Delta</option>
+                    <option value="Porcelana" {% if dado.operacao == 'Porcelana' %}selected{% endif %}>Porcelana</option>
+                    <option value="Eletrik" {% if dado.operacao == 'Eletrik' %}selected{% endif %}>Eletrik</option>
+                    <option value="Consolidado" {% if dado.operacao == 'Consolidado' %}selected{% endif %}>Consolidado</option>
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Motorista</label>
+                <input type="text" name="motorista" value="{{ dado.motorista }}" list="lista-motoristas" required
+                       class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-orange-500 outline-none uppercase font-bold">
+                <datalist id="lista-motoristas">
+                    {% for m in motoristas %}
+                    <option value="{{ m }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase text-left">Link da Tratativa (E-mail)</label>
+                <div class="relative">
+                    <i data-lucide="mail" class="absolute left-3 top-3 text-slate-500" size="18"></i>
+                    <input type="url" name="link_email"
+                           value="{{ dado.link_email or '' }}"
+                           class="w-full bg-slate-800 border border-slate-700 text-white p-3 pl-10 rounded-xl outline-none focus:border-blue-500"
+                           placeholder="Cole o link do Outlook/Gmail aqui...">
+                </div>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Cliente</label>
+                <input type="text" name="cliente" value="{{ dado.cliente }}" list="lista-clientes" required
+                       class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-orange-500 outline-none uppercase font-bold">
+                <datalist id="lista-clientes">
+                    {% for c in clientes %}
+                    <option value="{{ c }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Modalidade</label>
+                <select name="modalidade" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-orange-500 outline-none">
+                    <option value="Autonomo" {% if dado.modalidade == 'Autonomo' %}selected{% endif %}>Autônomo</option>
+                    <option value="Frota" {% if dado.modalidade == 'Frota' %}selected{% endif %}>Frota</option>
+                </select>
+            </div>
+
+            <div><label class="block text-xs font-bold text-slate-400 mb-1 uppercase">CTE</label><input type="text" name="cte" value="{{ dado.cte }}" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl"></div>
+            <div><label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Notas Fiscais</label><input type="text" name="nfs" value="{{ dado.nfs }}" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl"></div>
+            <div><label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Cidade</label><input type="text" name="cidade" value="{{ dado.cidade }}" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl"></div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Motivo</label>
+                <input type="text" name="motivo" value="{{ dado.motivo }}" list="lista-motivos" required class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-orange-500 outline-none">
+                <datalist id="lista-motivos">
+                    {% for mot in motivos %}
+                    <option value="{{ mot }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="md:col-span-2 mt-4">
+                <button type="submit" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2">
+                    <i data-lucide="save" size="20"></i> SALVAR ALTERAÇÕES
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

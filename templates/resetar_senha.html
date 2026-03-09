@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Definir Nova Senha | Transnet</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <style>
+        body { background-color: #0b0e14; }
+        .neon-text-purple { text-shadow: 0 0 15px rgba(147, 51, 234, 0.5); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md bg-slate-900 p-8 rounded-2xl border border-slate-700 shadow-[0_0_50px_rgba(15,23,42,0.5)] relative overflow-hidden">
+        
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-600 to-transparent"></div>
+
+        <div class="text-center mb-8">
+            <div class="inline-flex p-4 bg-purple-500/10 rounded-full mb-4 text-purple-400 border border-purple-500/20">
+                <i data-lucide="key-round" size="32"></i>
+            </div>
+            <h1 class="text-2xl font-black text-white uppercase italic tracking-wider neon-text-purple">Nova Senha</h1>
+            <p class="text-slate-500 text-xs font-bold mt-2 uppercase">Crie uma senha forte para sua segurança</p>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="mb-6 bg-red-500/10 border border-red-500/20 text-red-200 px-4 py-3 rounded-xl text-xs font-bold text-center">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="space-y-4" onsubmit="return validarSenha()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1">Nova Senha</label>
+                <div class="relative">
+                    <i data-lucide="lock" class="absolute left-4 top-3.5 text-slate-500" size="18"></i>
+                    <input type="password" name="nova_senha" id="senha1" required placeholder="••••••••" 
+                           class="w-full bg-slate-800 border border-slate-700 text-white pl-12 p-3 rounded-xl focus:border-purple-500 focus:bg-slate-800/80 outline-none transition-all font-bold text-sm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1">Confirmar Senha</label>
+                <div class="relative">
+                    <i data-lucide="check-circle-2" class="absolute left-4 top-3.5 text-slate-500" size="18"></i>
+                    <input type="password" name="confirmacao" id="senha2" required placeholder="••••••••" 
+                           class="w-full bg-slate-800 border border-slate-700 text-white pl-12 p-3 rounded-xl focus:border-purple-500 focus:bg-slate-800/80 outline-none transition-all font-bold text-sm">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-xl shadow-[0_0_20px_rgba(147,51,234,0.3)] uppercase tracking-widest transition-all mt-6 flex items-center justify-center gap-2">
+                <i data-lucide="save" size="18"></i>
+                <span>Atualizar Senha</span>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function validarSenha() {
+            const s1 = document.getElementById('senha1').value;
+            const s2 = document.getElementById('senha2').value;
+            if (s1 !== s2) {
+                alert('As senhas não coincidem!');
+                return false;
+            }
+            if (s1.length < 4) {
+                alert('A senha deve ter no mínimo 4 caracteres.');
+                return false;
+            }
+            return true;
+        }
+    </script>
+</body>
+</html>

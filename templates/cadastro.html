@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Novo Registro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <style>body { background-color: #0b0e14; }</style>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+<script>const BASE_URL = "{{ request.script_root }}";</script>
+<script>const BASE_URL = "{{ request.script_root }}";</script>
+</head>
+<body class="text-slate-200 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-4xl border border-slate-700 relative">
+
+        <div class="flex justify-between items-start mb-6 border-b border-slate-700 pb-4">
+            <div>
+                <h2 class="text-2xl font-black italic text-white uppercase">Nova <span class="text-blue-500">Ocorrência</span></h2>
+                <p class="text-[10px] text-slate-500 font-bold uppercase mt-1">Preencha os campos obrigatórios</p>
+            </div>
+
+            <div class="flex flex-col items-end gap-2">
+                {% if sucesso %}
+                <div class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-2 border border-emerald-500/30 animate-pulse">
+                    <i data-lucide="check-circle" size="14"></i> Salvo com Sucesso!
+                </div>
+                <script>setTimeout(() => window.close(), 2000);</script>
+                {% endif %}
+
+                {% if current_user.nivel == 'gerencial' %}
+                <a href="{{ url_for('gerenciar_cadastros') }}" target="_blank" class="text-[10px] font-bold text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 px-3 py-2 rounded-lg border border-slate-600 transition-all flex items-center gap-2 uppercase tracking-wider">
+                    <i data-lucide="settings" size="12"></i> Gerenciar Motoristas/Clientes
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form action="{{ url_for('salvar') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Data Ocorrência</label>
+                <input type="date" name="data" required class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none transition-colors">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Operação</label>
+                <select name="operacao" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none appearance-none font-bold transition-colors">
+                    <option value="Delta">Delta</option>
+                    <option value="Porcelana">Porcelana</option>
+                    <option value="Eletrik">Eletrik</option>
+                    <option value="Consolidado">Consolidado</option>
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase flex justify-between">
+                    Motorista
+                    <span class="text-[9px] text-slate-600 italic normal-case">Selecione da lista ou digite</span>
+                </label>
+                <input type="text" name="motorista" list="lista-motoristas" required placeholder="DIGITE PARA BUSCAR..."
+                       class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none uppercase font-bold transition-colors">
+                <datalist id="lista-motoristas">
+                    {% for m in motoristas %}
+                    <option value="{{ m }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase text-left">Link da Tratativa (E-mail)</label>
+                <div class="relative">
+                    <i data-lucide="mail" class="absolute left-3 top-3 text-slate-500" size="18"></i>
+                    <input type="url" name="link_email"
+                            class="w-full bg-slate-800 border border-slate-700 text-white p-3 pl-10 rounded-xl outline-none focus:border-blue-500"
+                            placeholder="Cole o link do Outlook/Gmail aqui...">
+                </div>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Cliente</label>
+                <input type="text" name="cliente" list="lista-clientes" required placeholder="DIGITE PARA BUSCAR..."
+                       class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none uppercase font-bold transition-colors">
+                <datalist id="lista-clientes">
+                    {% for c in clientes %}
+                    <option value="{{ c }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Modalidade</label>
+                <select name="modalidade" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none transition-colors">
+                    <option value="Autonomo">Autônomo</option>
+                    <option value="Frota">Frota</option>
+                </select>
+            </div>
+
+            <div><label class="block text-xs font-bold text-slate-400 mb-1 uppercase">CTE</label><input type="text" name="cte" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none"></div>
+            <div><label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Notas Fiscais</label><input type="text" name="nfs" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none"></div>
+            <div><label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Cidade</label><input type="text" name="cidade" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none"></div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Motivo</label>
+                <input type="text" name="motivo" list="lista-motivos" required class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none" placeholder="Selecione ou digite...">
+                <datalist id="lista-motivos">
+                    {% for mot in motivos %}
+                    <option value="{{ mot }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <input type="hidden" name="situacao" value="Em Andamento">
+
+            <div class="md:col-span-2 mt-4">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-blue-500/20 transition-all transform active:scale-[0.98] flex justify-center items-center gap-2">
+                    <i data-lucide="save" size="20"></i> SALVAR REGISTRO
+                </button>
+            </div>
+        </form>
+    </div>
+    <script>
+        lucide.createIcons();
+
+        function atualizarDatalist(idLista, novosDados) {
+            const datalist = document.getElementById(idLista);
+
+            datalist.innerHTML = '';
+
+            novosDados.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item;
+                datalist.appendChild(option);
+            });
+        }
+
+        function buscarAtualizacoes() {
+            fetch(BASE_URL + '/api/listas_cadastro')
+                .then(response => response.json())
+                .then(data => {
+                    atualizarDatalist('lista-motoristas', data.motoristas);
+                    atualizarDatalist('lista-clientes', data.clientes);
+                    atualizarDatalist('lista-motivos', data.motivos);
+                    console.log("Listas sincronizadas com sucesso!");
+                })
+                .catch(erro => console.error("Erro ao sincronizar listas:", erro));
+        }
+
+        setInterval(buscarAtualizacoes, 5000);
+
+        buscarAtualizacoes();
+    </script>
+</body>
+</html>

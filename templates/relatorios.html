@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatórios Avançados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        body { background-color: #0b0e14; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #1e293b; color: #94a3b8; font-weight: 800; text-transform: uppercase; font-size: 0.75rem; padding: 1rem; text-align: left; }
+        td { border-bottom: 1px solid #334155; padding: 1rem; color: #cbd5e1; font-size: 0.875rem; }
+        tr:hover { background-color: #1e293b; }
+        .neon-text-blue {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+<script>const BASE_URL = "{{ request.script_root }}";</script>
+</head>
+<body class="text-slate-200 p-6 min-h-screen flex flex-col">
+
+    <div class="max-w-[1920px] mx-auto w-full flex-1 flex flex-col">
+
+        <div class="flex flex-col xl:flex-row justify-between items-end mb-6 gap-6 border-b border-slate-800 pb-6">
+
+            <div class="w-full xl:w-auto">
+                <div class="flex items-center gap-3 mb-2">
+                    <a href="{{ url_for('dashboard') }}" class="bg-slate-800 p-2 rounded-xl hover:bg-slate-700 transition-colors">
+                        <i data-lucide="arrow-left" class="text-slate-400"></i>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-black italic uppercase text-slate-100 neon-text-blue tracking-wider leading-none">
+                            RELATÓRIOS <span class="text-blue-500">OPERACIONAL</span>
+                        </h1>
+                        <p class="text-xs text-slate-500 font-bold mt-1">Inteligência Operacional • Transnet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2 w-full xl:w-auto justify-start xl:justify-end">
+
+                <a href="{{ url_for('exportar_pdf') }}?{{ request.query_string.decode() }}" class="bg-red-600 hover:bg-red-500 text-white px-5 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 transition-all border border-red-500/50">
+                    <i data-lucide="file-text" size="18"></i>
+                    BAIXAR PDF
+                </a>
+
+                <div class="w-px h-8 bg-slate-700 mx-2 hidden md:block"></div>
+
+                <button onclick="toggleFiltro()" class="bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-xl font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="filter" size="18"></i> Filtros
+                </button>
+
+                <button onclick="pedirSenha(BASE_URL + '/backup_banco', '🔒 Senha Gerencial exigida:', true)"
+                    class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg transition-all flex items-center gap-2">
+                     <i data-lucide="download-cloud" size="18"></i> Backup
+                </button>
+
+                <button onclick="pedirSenha(BASE_URL + '/logs', '🔒 Senha Gerencial exigida:', true)"
+                    class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-xl font-bold text-sm transition-all flex items-center gap-2">
+                    <i data-lucide="shield" size="18"></i> Logs
+                </button>
+            </div>
+        </div>
+
+        <div id="area-filtros" class="hidden bg-slate-800 p-6 rounded-2xl border border-slate-700 mb-8 shadow-xl transition-all animate-in fade-in slide-in-from-top-2">
+            <h2 class="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                <i data-lucide="search" size="16"></i> Refinar Dados
+            </h2>
+            <form class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
+                <div><label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">De:</label><input type="date" name="inicio" value="{{ request.args.get('inicio', '') }}" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Até:</label><input type="date" name="fim" value="{{ request.args.get('fim', '') }}" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Motorista</label><input type="text" name="motorista" value="{{ request.args.get('motorista', '') }}" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cliente</label><input type="text" name="cliente" value="{{ request.args.get('cliente', '') }}" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm"></div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Cidade</label>
+                    <input type="text" name="cidade" list="lista-cidades" value="{{ request.args.get('cidade', '') }}" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm" placeholder="Digite para buscar...">
+                    <datalist id="lista-cidades">
+                        {% for c in cidades %}
+                        <option value="{{ c }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+
+                <div><label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Motivo</label><input type="text" name="motivo" value="{{ request.args.get('motivo', '') }}" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm"></div>
+                <div><label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Operação</label>
+                    <select name="operacao" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm">
+                        <option value="">Todas</option><option value="Delta">Delta</option><option value="Porcelana">Porcelana</option><option value="Eletrik">Eletrik</option>
+                    </select>
+                </div>
+                <div><label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase">Status de Atraso</label>
+                    <select name="sla" class="w-full bg-slate-900 border border-slate-600 text-white p-2.5 rounded-lg text-sm">
+                        <option value="">Todos</option>
+                        <option value="atrasado" {% if request.args.get('sla') == 'atrasado' %}selected{% endif %}>⚠️ Apenas Atrasados (+24h)</option>
+                    </select>
+                </div>
+                <div>
+                    <button type="submit" formaction="{{ url_for('relatorios') }}" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-xl font-bold text-sm w-full transition-all shadow-lg"><i data-lucide="search" size="16" class="inline"></i> FILTRAR</button>
+                </div>
+            </form>
+            <div class="mt-4 border-t border-slate-700 pt-2 text-right">
+                <button onclick="toggleFiltro()" class="text-xs font-bold text-slate-500 hover:text-white uppercase">Fechar Filtros</button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-2 text-center">Volume por Operação</h3>
+                <div class="h-40">
+                    <canvas id="chartOps"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-2 text-center">Status (Resolvidas x Atrasadas)</h3>
+                <div class="h-40 flex justify-center">
+                    <canvas id="chartSla"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-2 text-center">Top 5 Motivos</h3>
+                <div class="h-40">
+                    <canvas id="chartMotivos"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col flex-1">
+            <div class="overflow-x-auto">
+                {% if tabela %}
+                    {{ tabela|safe }}
+                {% else %}
+                    <div class="p-12 text-center text-slate-500 font-bold uppercase">Sem dados encontrados para esta busca.</div>
+                {% endif %}
+            </div>
+
+            <div class="bg-slate-900 p-4 border-t border-slate-700 flex justify-between items-center mt-auto">
+                <span class="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                    Página <span class="text-white text-sm">{{ pagina_atual }}</span> de {{ total_paginas }}
+                </span>
+
+                <div class="flex gap-2">
+                    {% if pagina_atual > 1 %}
+                    <a href="{{ url_for('relatorios') }}?page={{ pagina_atual - 1 }}&{{ request.query_string.decode().replace('page=' ~ pagina_atual, '') }}"
+                       class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all uppercase">
+                        <i data-lucide="chevron-left" size="14"></i> Anterior
+                    </a>
+                    {% else %}
+                    <button disabled class="bg-slate-800 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed flex items-center gap-1 uppercase opacity-50">
+                        <i data-lucide="chevron-left" size="14"></i> Anterior
+                    </button>
+                    {% endif %}
+
+                    {% if pagina_atual < total_paginas %}
+                    <a href="{{ url_for('relatorios') }}?page={{ pagina_atual + 1 }}&{{ request.query_string.decode().replace('page=' ~ pagina_atual, '') }}"
+                       class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all uppercase shadow-lg">
+                        Próximo <i data-lucide="chevron-right" size="14"></i>
+                    </a>
+                    {% else %}
+                    <button disabled class="bg-slate-800 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed flex items-center gap-1 uppercase opacity-50">
+                        Próximo <i data-lucide="chevron-right" size="14"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-senha" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-md p-6 rounded-2xl shadow-2xl">
+            <div class="flex justify-between items-start mb-4">
+                <div><h3 class="text-xl font-black text-white uppercase italic">Área <span class="text-blue-500">Protegida</span></h3></div>
+                <button onclick="fecharModalSenha()" class="text-slate-500 hover:text-red-500"><i data-lucide="x" size="24"></i></button>
+            </div>
+            <div class="mb-6">
+                <p id="msg-confirmacao" class="text-sm text-slate-300 mb-4 bg-slate-800 p-3 rounded-lg"></p>
+                <input type="password" id="input-senha-gerencial" class="w-full bg-slate-800 border border-slate-600 text-white p-3 rounded-xl text-lg text-center" placeholder="Senha..." onkeyup="if(event.key==='Enter') confirmarAcaoSenha()">
+            </div>
+            <button onclick="confirmarAcaoSenha()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg">CONFIRMAR</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        Chart.register(ChartDataLabels);
+
+        const dadosOps = {{ graficos.ops | tojson }};
+        const dadosSla = {{ graficos.sla | tojson }};
+        const dadosMotivos = {{ graficos.motivos | tojson }};
+
+        const labelStyle = {
+            color: '#f8fafc', // Branco super claro
+            font: { weight: '900', size: 11, family: 'Arial' },
+            textShadowBlur: 6,
+            textShadowColor: 'rgba(0, 0, 0, 0.8)' // Sombra no texto para destacar
+        };
+
+        function formatarLabelPizza(value, ctx) {
+            if (value === 0) return "";
+            let sum = 0;
+            ctx.chart.data.datasets[0].data.map(data => { sum += Number(data); });
+            let percentage = (value * 100 / sum).toFixed(1) + "%";
+            let nome = ctx.chart.data.labels[ctx.dataIndex];
+            return nome + "\n" + value + " (" + percentage + ")";
+        }
+
+        function formatarLabelBarra(value, ctx) {
+            if (value === 0) return "";
+            let sum = 0;
+            ctx.chart.data.datasets[0].data.map(data => { sum += Number(data); });
+            let percentage = (value * 100 / sum).toFixed(1) + "%";
+            return value + " (" + percentage + ")";
+        }
+
+        new Chart(document.getElementById('chartOps'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(dadosOps),
+                datasets: [{
+                    data: Object.values(dadosOps),
+                    // Cores Vibrantes com 80% de opacidade
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.85)',  // Azul Neon
+                        'rgba(16, 185, 129, 0.85)',  // Esmeralda
+                        'rgba(249, 115, 22, 0.85)',  // Laranja
+                        'rgba(168, 85, 247, 0.85)'   // Roxo
+                    ],
+                    borderColor: '#1e293b', // Mesma cor do fundo do card para criar o "gap"
+                    borderWidth: 4,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 30 },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        ...labelStyle,
+                        formatter: formatarLabelPizza,
+                        anchor: 'end',
+                        align: 'end',
+                        offset: 4
+                    }
+                }
+            }
+        });
+
+        new Chart(document.getElementById('chartSla'), {
+            type: 'pie',
+            data: {
+                labels: ['Resolvidas', 'Atrasadas (>24h)'],
+                datasets: [{
+                    data: [dadosSla.resolvido, dadosSla.atrasado],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.85)', // Verde Brilhante
+                        'rgba(239, 68, 68, 0.85)'   // Vermelho Alerta
+                    ],
+                    borderColor: '#1e293b',
+                    borderWidth: 4,
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 30 },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        ...labelStyle,
+                        formatter: formatarLabelPizza,
+                        anchor: 'end',
+                        align: 'end',
+                        offset: 4
+                    }
+                }
+            }
+        });
+
+        const motivosOrdenados = Object.entries(dadosMotivos)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+
+        const labelsMotivos = motivosOrdenados.map(item => item[0]);
+        const valoresMotivos = motivosOrdenados.map(item => item[1]);
+
+        new Chart(document.getElementById('chartMotivos'), {
+            type: 'bar',
+            data: {
+                labels: labelsMotivos,
+                datasets: [{
+                    label: 'Ocorrências',
+                    data: valoresMotivos,
+                    backgroundColor: (context) => {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return 'rgba(59, 130, 246, 0.8)';
+
+                        // Gradiente da esquerda para a direita
+                        const gradient = ctx.createLinearGradient(0, 0, chartArea.right, 0);
+                        gradient.addColorStop(0, 'rgba(30, 58, 138, 0.8)');   // Azul escuro na base
+                        gradient.addColorStop(1, 'rgba(56, 189, 248, 0.9)');  // Ciano brilhante na ponta
+                        return gradient;
+                    },
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { right: 50 } }, // Espaço extra para a porcentagem
+                scales: {
+                    x: { display: false },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#e2e8f0', font: {size: 10, weight: 'bold'} }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        ...labelStyle,
+                        formatter: formatarLabelBarra,
+                        anchor: 'end',
+                        align: 'right',
+                        offset: 6
+                    }
+                }
+            }
+        });
+
+        // --- FUNÇÕES DE INTERFACE ---
+        let urlDestino = "";
+
+        function toggleFiltro() {
+            document.getElementById('area-filtros').classList.toggle('hidden');
+        }
+
+        function pedirSenha(url, msg, keepParams) {
+            urlDestino = url;
+            if (keepParams) {
+                // A lógica de manter parametros será feita no confirmarAcaoSenha
+            }
+            document.getElementById('msg-confirmacao').innerText = msg;
+            document.getElementById('modal-senha').classList.remove('hidden');
+            document.getElementById('input-senha-gerencial').value = "";
+            document.getElementById('input-senha-gerencial').focus();
+        }
+
+        function fecharModalSenha() { document.getElementById('modal-senha').classList.add('hidden'); }
+
+        function confirmarAcaoSenha() {
+            const senha = document.getElementById('input-senha-gerencial').value;
+            if (senha) {
+                const separator = urlDestino.includes('?') ? '&' : '?';
+
+                // Mantém os filtros atuais da URL se necessário
+                const paramsPagina = new URLSearchParams(window.location.search);
+                paramsPagina.delete('senha');
+
+                // Se for para logs/backup, talvez não precisemos dos filtros, mas se for exportação segura, sim.
+                // Como Logs e Backup são rotas fixas, não vamos concatenar os filtros da busca nelas.
+
+                window.location.href = urlDestino + separator + "senha=" + senha;
+            }
+        }
+    </script>
+</body>
+</html>

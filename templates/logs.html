@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Auditoria do Sistema</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <style>body { background-color: #0b0e14; }</style>
+</head>
+<body class="text-slate-200 p-8 min-h-screen">
+
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between items-center mb-8 border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="text-2xl font-black italic uppercase text-slate-100">
+                    LOGS DE <span class="text-blue-500">AUDITORIA</span>
+                </h1>
+                <p class="text-xs text-slate-500 font-bold">Rastreabilidade de Ações</p>
+            </div>
+            <a href="{{ url_for('dashboard') }}" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all">
+                <i data-lucide="arrow-left" size="18"></i> Voltar
+            </a>
+        </div>
+
+        <div class="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left text-slate-400">
+                    <thead class="text-xs text-slate-500 uppercase bg-slate-900 border-b border-slate-700">
+                        <tr>
+                            <th class="px-6 py-4">Data/Hora</th>
+                            <th class="px-6 py-4">Ação</th>
+                            <th class="px-6 py-4">Detalhes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr class="border-b border-slate-700 hover:bg-slate-700/50 transition-colors">
+                            <td class="px-6 py-4 font-mono text-xs text-slate-300 whitespace-nowrap">{{ log.data_hora }}</td>
+                            <td class="px-6 py-4 font-bold text-white">
+                                {% if log.acao == 'DELEÇÃO' %} <span class="text-red-500 bg-red-500/10 px-2 py-1 rounded">DELEÇÃO</span>
+                                {% elif log.acao == 'CONCLUSAO' %} <span class="text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">CONCLUSÃO</span>
+                                {% elif log.acao == 'EDIÇÃO' %} <span class="text-blue-400 bg-blue-500/10 px-2 py-1 rounded">EDIÇÃO</span>
+                                {% elif log.acao == 'ARQUIVAMENTO' %} <span class="text-purple-400 bg-purple-500/10 px-2 py-1 rounded">ARQUIVAMENTO</span>
+                                {% elif log.acao == 'CADASTRO' %} <span class="text-orange-400 bg-orange-500/10 px-2 py-1 rounded">CADASTRO</span>
+                                {% else %} <span class="text-slate-300">{{ log.acao }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-slate-300">{{ log.detalhes }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="px-6 py-12 text-center text-slate-500">Nenhum registro encontrado nesta página.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-slate-900 p-4 border-t border-slate-700 flex justify-between items-center">
+                
+                {% if pagina > 1 %}
+                <a href="{{ url_for('logs', page=pagina-1) }}" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                    <i data-lucide="chevron-left" size="16"></i> Anterior
+                </a>
+                {% else %}
+                <button disabled class="bg-slate-800/50 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed flex items-center gap-2">
+                    <i data-lucide="chevron-left" size="16"></i> Anterior
+                </button>
+                {% endif %}
+
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    Página <span class="text-white">{{ pagina }}</span> de <span class="text-white">{{ total_paginas }}</span>
+                </span>
+
+                {% if pagina < total_paginas %}
+                <a href="{{ url_for('logs', page=pagina+1) }}" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                    Próxima <i data-lucide="chevron-right" size="16"></i>
+                </a>
+                {% else %}
+                <button disabled class="bg-slate-800/50 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold cursor-not-allowed flex items-center gap-2">
+                    Próxima <i data-lucide="chevron-right" size="16"></i>
+                </button>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

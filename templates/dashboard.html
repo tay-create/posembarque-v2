@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Painel Operacional</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <style>
+        :root {
+            --bg-body: #0b0e14;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --neon-glow: 0 0 10px rgba(42, 89, 161, 0.6), 0 0 20px rgba(42, 89, 161, 0.3);
+        }
+
+        /* --- MODO CLARO --- */
+        body.light-mode {
+            --bg-body: #f1f5f9;
+            /* Fundo da página: Cinza Gelo */
+            --bg-card: #ffffff;
+            /* Fundo do Card: Branco Puro */
+            --text-primary: #0f172a;
+            /* Texto Principal: Azul Escuro */
+            --text-secondary: #475569;
+            /* Texto Secundário: Cinza Chumbo */
+            --border-color: #cbd5e1;
+            /* Borda: Cinza Suave */
+            --neon-glow: none;
+            /* Remove o brilho no modo claro */
+        }
+
+        /* --- APLICAÇÃO GLOBAL --- */
+        body {
+            background-color: var(--bg-body) !important;
+            color: var(--text-primary);
+            transition: background-color 0.5s ease, color 0.3s ease;
+        }
+
+        /* --- COMPONENTES GERAIS (Cards, Botões) --- */
+        body.light-mode .bg-slate-800,
+        body.light-mode .bg-slate-900 {
+            background-color: var(--bg-card) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body.light-mode .text-slate-100,
+        body.light-mode .text-slate-200,
+        body.light-mode .text-slate-300,
+        body.light-mode .text-white {
+            color: var(--text-primary) !important;
+        }
+
+        body.light-mode .text-slate-400,
+        body.light-mode .text-slate-500 {
+            color: var(--text-secondary) !important;
+        }
+
+        body.light-mode .border-slate-700,
+        body.light-mode .border-slate-800 {
+            border-color: var(--border-color) !important;
+        }
+
+        /* --- NEON E LOGO --- */
+        .neon-text-blue {
+            text-shadow: var(--neon-glow);
+        }
+
+        body.light-mode .neon-text-blue {
+            color: #2563eb !important;
+            /* Azul sólido */
+            text-shadow: none !important;
+        }
+
+        .logo-net-highlight {
+            color: #4a7ac9;
+            text-shadow: 0 0 10px #2A59A1, 0 0 25px rgba(42, 89, 161, 0.8);
+            transition: all 0.3s ease;
+        }
+
+        body.light-mode .logo-net-highlight {
+            color: #1e40af !important;
+            /* Azul corporativo mais escuro e sólido */
+            text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2) !important;
+            /* Sombra preta básica */
+        }
+
+        /* --- CAIXAS DE DOCUMENTOS E DATA (Correção Visual) --- */
+        body.light-mode [class*="bg-slate-"]:not(#filtro-container),
+        body.light-mode [class*="bg-gray-"]:not(#filtro-container),
+        body.light-mode [class*="bg-black"]:not(#filtro-container) {
+            background-color: #ffffff !important;
+            color: #1e293b !important;
+            border: 1px solid #e2e8f0;
+            opacity: 1 !important;
+        }
+
+        /* --- FILTROS --- */
+        #filtro-container {
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        #filtro-container.aberto {
+            max-height: 500px;
+            opacity: 1;
+            margin-bottom: 1.5rem;
+        }
+
+        body.light-mode #filtro-container.aberto {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            opacity: 1 !important;
+            margin-bottom: 1.5rem !important;
+        }
+
+        body.light-mode #filtro-container:not(.aberto) {
+            opacity: 0 !important;
+            max-height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+        }
+
+
+        body.light-mode .bg-slate-800,
+        body.light-mode .bg-slate-900 {
+            border: 1px solid #e2e8f0 !important;
+        }
+
+
+        body.light-mode .border-b-4.border-orange-500 {
+            border-bottom: 4px solid #f97316 !important;
+        }
+
+        body.light-mode .border-b-4.border-green-500,
+        body.light-mode .border-b-4.border-emerald-500 {
+            border-bottom: 4px solid #10b981 !important;
+        }
+
+        body.light-mode .border-b-4.border-red-600 {
+            border-bottom: 4px solid #ef4444 !important;
+        }
+
+        body.light-mode .border-b-4.border-blue-500 {
+            border-bottom: 4px solid #3b82f6 !important;
+        }
+
+
+
+
+        body.light-mode #container-cards .bg-slate-800,
+        body.light-mode #container-cards a.bg-slate-800 {
+            border-bottom-width: 1px !important;
+            /* Reseta o baixo para cinza fino */
+            border-bottom-color: #e2e8f0 !important;
+            border-left-width: 5px !important;
+            /* Cria a barra grossa na esquerda */
+        }
+
+        body.light-mode #container-cards .border-orange-500 {
+            border-left-color: #f97316 !important;
+        }
+
+        body.light-mode #container-cards .border-green-500,
+        body.light-mode #container-cards .border-emerald-500 {
+            border-left-color: #10b981 !important;
+        }
+
+        body.light-mode #container-cards .border-red-500,
+        body.light-mode #container-cards .border-red-600,
+        body.light-mode #container-cards [class*="border-red"] {
+            border-left: 5px solid #dc2626 !important;
+            /* Vermelho Forte (Red-600) */
+            border-bottom: 1px solid #e2e8f0 !important;
+            /* Reseta a borda de baixo para cinza fino */
+            border-top: 1px solid #e2e8f0 !important;
+            border-right: 1px solid #e2e8f0 !important;
+        }
+
+        body.light-mode #container-cards .border-blue-500 {
+            border-left-color: #3b82f6 !important;
+        }
+    </style>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <script>
+        const BASE_URL = "{{ request.script_root }}";
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    </script>
+</head>
+
+<body class="p-4 text-slate-100 min-h-screen flex flex-col">
+
+    <div class="w-full max-w-[1920px] mx-auto">
+
+        <div class="flex flex-col xl:flex-row justify-between items-center gap-6 mb-4 border-b border-slate-800 pb-6">
+
+            <div class="w-full xl:w-auto flex justify-center xl:justify-start">
+                <div class="select-none transform hover:scale-105 transition-transform duration-300 cursor-default">
+                    <img src="{{ url_for('static', filename='logo-pdf-transnet.png') }}" alt="Transnet Logística"
+                        class="h-12 md:h-14 w-auto object-contain drop-shadow-[0_0_12px_rgba(42,89,161,0.5)]">
+                </div>
+            </div>
+
+            <div class="flex-1 w-full xl:mx-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div
+                        class="bg-slate-800 px-4 py-4 rounded-xl border-b-4 border-orange-500 shadow-lg flex flex-col items-center justify-center">
+                        <span
+                            class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1 whitespace-nowrap">Em
+                            Andamento</span>
+                        <span id="contador-andamento" class="text-3xl font-black text-white">{{ metricas.andamento
+                            }}</span>
+                    </div>
+                    <div
+                        class="bg-slate-800 px-4 py-4 rounded-xl border-b-4 border-emerald-500 shadow-lg flex flex-col items-center justify-center">
+                        <span
+                            class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1 whitespace-nowrap">Resolvidas</span>
+                        <span id="contador-resolvidas" class="text-3xl font-black text-emerald-400">{{
+                            metricas.resolvidas }}</span>
+                    </div>
+                    <a href="{{ url_for('dashboard') }}?filtro_atraso=sim"
+                        class="bg-slate-800 px-4 py-4 rounded-xl border-b-4 border-red-600 shadow-lg flex flex-col items-center justify-center group hover:bg-slate-700 transition-colors">
+                        <span
+                            class="text-[11px] text-red-400 font-bold uppercase tracking-wider mb-1 whitespace-nowrap">+
+                            24 Horas</span>
+                        <span id="contador-atrasadas" class="text-3xl font-black text-red-500">{{ metricas.atrasadas
+                            }}</span>
+                    </a>
+                    <div
+                        class="bg-slate-800 px-4 py-4 rounded-xl border-b-4 border-blue-500 shadow-lg flex flex-col items-center justify-center">
+                        <span
+                            class="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-1 whitespace-nowrap">Total
+                            Geral</span>
+                        <span id="contador-total" class="text-3xl font-black text-white">{{ metricas.total }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full xl:w-auto flex flex-col justify-center xl:justify-end gap-3">
+                {% if current_user.nivel != 'tv' %}
+                <div
+                    class="flex justify-center xl:justify-end items-center gap-3 border-b border-slate-800/50 pb-2 mb-1">
+                    <div class="flex items-center gap-4">
+
+                        {% if current_user.nivel in ['gerencial', 'desenvolvedor'] %}
+                        <div class="relative">
+                            <button onclick="toggleNotificacoes()"
+                                class="relative p-2 text-slate-400 hover:text-white transition-all">
+                                <i data-lucide="bell" size="24"></i>
+                                <span id="badge-notificacao" class="absolute top-1 right-1 flex h-4 w-4 hidden">
+                                    <span
+                                        class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span
+                                        class="relative inline-flex rounded-full h-4 w-4 bg-red-600 text-[10px] items-center justify-center text-white font-bold">!</span>
+                                </span>
+                            </button>
+                        </div>
+                        {% endif %}
+
+                        <button onclick="alternarTema()"
+                            class="p-2 rounded-lg transition-all hover:bg-slate-700/50 group"
+                            title="Alternar Tema Claro/Escuro">
+                            <i data-lucide="moon" class="icon-moon text-slate-400 group-hover:text-blue-400 hidden"></i>
+                            <i data-lucide="sun" class="icon-sun text-yellow-500 group-hover:text-yellow-300"></i>
+                        </button>
+
+                        <div class="text-right">
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none">Logado
+                                como</p>
+                            <p class="text-sm font-bold text-blue-400 leading-none">{{ current_user.nome }}</p>
+                        </div>
+
+                        <a href="{{ url_for('logout') }}"
+                            class="bg-red-500/10 hover:bg-red-500/20 text-red-500 p-2 rounded-lg transition-all"
+                            title="Sair">
+                            <i data-lucide="log-out" size="18"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="flex justify-center xl:justify-end gap-2 flex-wrap">
+
+                    <a href="{{ url_for('relatorios') }}"
+                        class="bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl font-bold text-sm hover:bg-slate-700 transition-all flex items-center gap-2 shadow-sm">
+                        <i data-lucide="bar-chart-3" size="16"></i> Relatórios
+                    </a>
+
+                    {% if current_user.nivel == 'gerencial' %}
+                    <a href="{{ url_for('arquivar_resolvidos') }}"
+                        onclick="return confirm('Arquivar todos os resolvidos?')"
+                        class="bg-slate-800 border border-slate-700 text-slate-400 px-4 py-2 rounded-xl font-bold text-sm hover:bg-slate-700 flex items-center gap-2">
+                        <i data-lucide="archive" size="16"></i> Arq.
+                    </a>
+                    {% endif %}
+
+                    <button onclick="toggleFiltro()"
+                        class="bg-slate-800 border border-slate-700 text-slate-300 px-4 py-2 rounded-xl font-bold text-sm hover:bg-slate-700 flex items-center gap-2">
+                        <i data-lucide="filter" size="16"></i> Filtros
+                    </button>
+                    <audio id="audio-alerta" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"
+                        preload="auto"></audio>
+
+                    {% if current_user.nivel == 'desenvolvedor' %}
+                    <a href="{{ url_for('central_chamados') }}"
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 border border-indigo-400 transition-all">
+                        <i data-lucide="headset" size="16"></i> Suporte
+                    </a>
+
+                    <button onclick="document.getElementById('modal-criar-patch').classList.remove('hidden')"
+                        class="bg-purple-600 text-white px-5 py-2 rounded-xl font-bold text-sm shadow-lg hover:bg-purple-500 flex items-center gap-2 border border-purple-400">
+                        <i data-lucide="zap" size="16"></i> Update
+                    </button>
+
+                    <a href="{{ url_for('cadastro') }}" target="_blank"
+                        class="bg-slate-700 text-slate-400 px-3 py-2 rounded-xl font-bold text-xs hover:bg-slate-600">
+                        <i data-lucide="plus" size="14"></i>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('cadastro') }}" target="_blank"
+                        class="bg-blue-600 text-white px-5 py-2 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-500 flex items-center gap-2">
+                        <i data-lucide="plus-circle" size="16"></i> Novo
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% else %}
+                <div class="flex flex-col items-end animate-in fade-in duration-1000">
+                    <div
+                        class="flex items-center gap-5 bg-slate-900/80 px-6 py-3 rounded-2xl border border-blue-500/40 shadow-[0_0_25px_rgba(59,130,246,0.15)] backdrop-blur-sm">
+
+                        <button onclick="alternarTema()"
+                            class="mr-2 p-2 rounded-xl hover:bg-slate-800 transition-colors">
+                            <i data-lucide="moon" class="icon-moon text-slate-400 hidden" size="20"></i>
+                            <i data-lucide="sun" class="icon-sun text-yellow-500" size="20"></i>
+                        </button>
+
+                        <a href="{{ url_for('logout') }}"
+                            class="mr-2 p-2 rounded-xl hover:bg-red-500/20 text-red-500 transition-colors"
+                            title="Sair da TV">
+                            <i data-lucide="log-out" size="20"></i>
+                        </a>
+
+                        <div class="text-right border-r-2 border-slate-700 pr-5">
+                            <span id="dia-semana"
+                                class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1"></span>
+                            <span id="data-completa" class="block text-lg font-bold text-blue-200 leading-none"></span>
+                        </div>
+                        <div>
+                            <span id="relogio-tv"
+                                class="text-4xl font-black text-white font-mono tracking-widest leading-none">--:--</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 mr-2 flex items-center gap-2">
+                        <span class="relative flex h-2 w-2">
+                            <span
+                                class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Painel Gestão</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="text-center mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+            <h1
+                class="text-3xl md:text-4xl font-black italic uppercase tracking-tighter neon-text-blue inline-block relative">
+                PAINEL DE <span class="text-[#2A59A1]">OCORRENCIAS</span>
+                <div
+                    class="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50">
+                </div>
+            </h1>
+            <p class="text-xs text-slate-500 font-bold mt-3 uppercase tracking-[0.2em]">
+                <span class="text-emerald-500">● Online</span> • OPERAÇÃO TRAMONTINA
+            </p>
+        </div>
+
+        <div id="filtro-container" class="bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+            <form action="{{ url_for('dashboard') }}" method="GET" class="flex flex-col md:flex-row gap-4 items-end">
+                <div class="w-full md:w-auto">
+                    <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Filtrar por:</label>
+                    <select name="tipo"
+                        class="w-full md:w-48 bg-slate-900 border border-slate-600 text-white p-3 rounded-xl text-sm font-bold outline-none">
+                        <option value="CLIENTE">Cliente</option>
+                        <option value="MOTORISTA">Motorista</option>
+                        <option value="MODALIDADE">Modalidade</option>
+                        <option value="CIDADE">Cidade</option>
+                        <option value="MOTIVO">Motivo</option>
+                    </select>
+                </div>
+                <div class="flex-1 w-full">
+                    <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Busca:</label>
+                    <input type="text" name="busca" placeholder="Pesquisar..."
+                        class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl text-sm outline-none focus:border-blue-500">
+                </div>
+                <button type="submit"
+                    class="bg-slate-700 hover:bg-slate-600 text-white px-8 py-3 rounded-xl font-bold text-sm transition-all">BUSCAR</button>
+            </form>
+        </div>
+
+        <div id="container-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
+            {% include 'cards_partial.html' %}
+        </div>
+    </div>
+
+    <div id="modal-galeria"
+        class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-slate-800 w-full max-w-4xl rounded-2xl border border-slate-700 overflow-hidden shadow-2xl">
+            <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-white font-black uppercase text-sm tracking-widest flex items-center gap-2">
+                    <i data-lucide="image" class="text-blue-500"></i> Evidências #<span id="modal-id-display">--</span>
+                </h3>
+                <button onclick="fecharModal()" class="text-slate-400 hover:text-white transition-colors">
+                    <i data-lucide="x" size="24"></i>
+                </button>
+            </div>
+            <div class="flex flex-col md:flex-row h-auto md:h-[500px]">
+                <div class="flex-1 bg-black flex items-center justify-center p-4 relative group">
+                    <img id="imagem-grande" src="" class="max-h-full max-w-full object-contain shadow-2xl">
+
+                    <button id="btn-apagar-foto" onclick="apagarFotoAtual()"
+                        class="absolute top-4 right-4 bg-red-600/80 hover:bg-red-500 text-white p-3 rounded-lg shadow-lg backdrop-blur-sm transition-all hidden z-50 border border-red-500/50">
+                        <i data-lucide="trash-2" size="20"></i>
+                    </button>
+
+                    <div id="empty-state" class="hidden text-slate-600 flex flex-col items-center">
+                        <i data-lucide="camera-off" size="48" class="mb-2"></i>
+                        <p class="font-bold uppercase text-xs">Sem imagens</p>
+                    </div>
+                </div>
+                <div class="w-full md:w-80 bg-slate-800 border-l border-slate-700 p-4 flex flex-col">
+                    <p class="text-[10px] font-black text-slate-500 uppercase mb-4 tracking-widest">Miniaturas (Máx 5)
+                    </p>
+                    <div id="grid-miniaturas" class="grid grid-cols-3 gap-2 mb-6"></div>
+                    <div class="mt-auto pt-4 border-t border-slate-700">
+                        <label id="btn-upload-label"
+                            class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-xl hover:bg-slate-700/50 hover:border-blue-500 cursor-pointer transition-all">
+                            <i data-lucide="upload-cloud" class="text-slate-500 mb-2"></i>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase">Enviar Foto</p>
+                            <input id="input-foto" type="file" class="hidden" accept="image/*" onchange="enviarFoto()">
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.nivel == 'desenvolvedor' %}
+    <div id="modal-criar-patch"
+        class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-slate-900 w-full max-w-lg rounded-2xl border border-purple-500/50 shadow-[0_0_50px_rgba(147,51,234,0.2)] p-6">
+            <h3 class="text-purple-400 font-black uppercase text-lg mb-4 flex items-center gap-2">
+                <i data-lucide="code-2"></i> Nova Atualização
+            </h3>
+            <form action="{{ url_for('publicar_patch') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label class="block text-xs font-bold text-slate-500 mb-1">VERSÃO/TÍTULO</label>
+                <input type="text" name="titulo" id="input-titulo" required
+                    class="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl mb-4 focus:border-purple-500 outline-none placeholder-slate-600"
+                    placeholder="Ex: v2.0 - 🚀 Otimizações">
+
+                <label class="block text-xs font-bold text-slate-500 mb-2">NOVIDADES (Uma por linha)</label>
+                <div class="flex flex-wrap gap-2 mb-2 bg-slate-800 p-2 rounded-lg border border-slate-700">
+                    <button type="button" onclick="inserirTexto('🚀')"
+                        class="hover:bg-slate-700 p-1 rounded text-lg">🚀</button>
+                    <button type="button" onclick="inserirTexto('✨')"
+                        class="hover:bg-slate-700 p-1 rounded text-lg">✨</button>
+                    <button type="button" onclick="inserirTexto('🐛')"
+                        class="hover:bg-slate-700 p-1 rounded text-lg">🐛</button>
+                    <button type="button" onclick="inserirTexto('🔥')"
+                        class="hover:bg-slate-700 p-1 rounded text-lg">🔥</button>
+                    <button type="button" onclick="inserirTexto('⚠️')"
+                        class="hover:bg-slate-700 p-1 rounded text-lg">⚠️</button>
+                    <div class="w-px h-6 bg-slate-600 mx-1 self-center"></div>
+                    <button type="button" onclick="inserirTag('<b>', '</b>')"
+                        class="px-2 py-1 bg-slate-700 rounded text-xs font-bold hover:bg-slate-600 text-white">B</button>
+                    <button type="button" onclick="inserirTag('<span class=\'text-blue-400\'>', '</span>')"
+                        class="px-2 py-1 bg-slate-700 rounded text-xs font-bold hover:bg-slate-600 text-blue-400">Azul</button>
+                    <button type="button" onclick="inserirTag('<span class=\'text-emerald-400\'>', '</span>')"
+                        class="px-2 py-1 bg-slate-700 rounded text-xs font-bold hover:bg-slate-600 text-emerald-400">Verde</button>
+                    <button type="button" onclick="inserirTag('<span class=\'text-orange-400\'>', '</span>')"
+                        class="px-2 py-1 bg-slate-700 rounded text-xs font-bold hover:bg-slate-600 text-orange-400">Laranja</button>
+                </div>
+                <textarea name="itens" id="input-itens" rows="6" required
+                    class="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl mb-6 focus:border-purple-500 outline-none font-mono text-sm"
+                    placeholder="- Novidade aqui..."></textarea>
+                <div class="flex gap-2">
+                    <button type="button" onclick="document.getElementById('modal-criar-patch').classList.add('hidden')"
+                        class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold hover:bg-slate-700">Cancelar</button>
+                    <button type="submit"
+                        class="flex-1 bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-500 shadow-lg">PUBLICAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if aviso_patch %}
+    <div id="modal-aviso-patch"
+        class="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-500">
+        <div
+            class="bg-slate-900 w-full max-w-lg rounded-2xl border border-emerald-500/30 shadow-[0_0_100px_rgba(16,185,129,0.2)] overflow-hidden relative">
+            <div
+                class="bg-gradient-to-r from-slate-900 via-emerald-900/20 to-slate-900 p-6 text-center border-b border-emerald-500/20">
+                <div
+                    class="mx-auto w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mb-3 border border-emerald-500/30 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                    <i data-lucide="rocket" size="24"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white italic tracking-tight mb-1">SISTEMA ATUALIZADO!</h2>
+                <p class="text-xs text-emerald-400 font-bold uppercase tracking-widest">{{ aviso_patch.titulo }}</p>
+            </div>
+            <div class="p-8">
+                <ul class="space-y-3">
+                    {% for item in aviso_patch.lista_itens %}
+                    <li class="flex items-start gap-3 text-slate-300">
+                        <i data-lucide="check-circle-2" class="text-emerald-500 shrink-0 mt-0.5" size="18"></i>
+                        <span class="text-sm font-medium">{{ item | safe }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="p-4 bg-slate-950/50 text-center border-t border-slate-800">
+                <button onclick="document.getElementById('modal-aviso-patch').remove()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg w-full transition-all">
+                    ENTENDI! 🚀
+                </button>
+                <p class="text-[9px] text-slate-600 mt-2 uppercase font-bold">Esta mensagem aparecerá apenas nas 3
+                    primeiras visitas.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div id="modal-motivo-solicitacao"
+        class="fixed inset-0 bg-black/80 z-[150] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 p-6 shadow-2xl">
+            <h3 class="text-white font-black uppercase mb-4">Justificativa de Edição</h3>
+            <form id="form-solicitar" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <textarea name="motivo_texto" required rows="4"
+                    class="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl mb-4 outline-none focus:border-orange-500"
+                    placeholder="Descreva o que precisa ser alterado..."></textarea>
+                <div class="flex gap-2">
+                    <button type="button" onclick="fecharModalSolicitacao()"
+                        class="flex-1 bg-slate-800 text-slate-400 py-2 rounded-lg font-bold">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-orange-600 text-white py-2 rounded-lg font-bold">Enviar
+                        Pedido</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="painel-notificacoes"
+        class="fixed top-0 right-0 h-full w-80 bg-slate-900 border-l border-slate-700 shadow-2xl z-[300] transform translate-x-full transition-transform duration-300 p-6 flex flex-col">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-white font-black uppercase text-sm tracking-widest">Solicitações</h3>
+            <button onclick="toggleNotificacoes()" class="text-slate-500 hover:text-white"><i
+                    data-lucide="x"></i></button>
+        </div>
+        <div id="lista-notificacoes" class="flex-1 overflow-y-auto space-y-4">
+            <p class="text-slate-600 text-xs text-center italic mt-10">Nenhuma solicitação pendente.</p>
+        </div>
+    </div>
+
+    {% if not current_user.email %}
+    <div id="modal-email-obrigatorio"
+        class="fixed inset-0 bg-black/95 z-[999] flex items-center justify-center p-4 backdrop-blur-md">
+        <div
+            class="bg-slate-900 w-full max-w-md p-8 rounded-2xl border border-blue-500/50 shadow-[0_0_50px_rgba(59,130,246,0.2)] text-center">
+            <div
+                class="mx-auto w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mb-6 text-blue-400">
+                <i data-lucide="mail-warning" size="32"></i>
+            </div>
+            <h2 class="text-2xl font-black text-white uppercase italic mb-2">Atualização de Segurança</h2>
+            <p class="text-slate-400 text-sm mb-6">
+                Olá, <span class="text-blue-400 font-bold">{{ current_user.nome }}</span>! <br>
+                Para garantir que você consiga recuperar sua senha caso esqueça, precisamos que cadastre seu e-mail
+                corporativo ou pessoal.
+            </p>
+            <form action="{{ url_for('salvar_email_usuario') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-4 text-left">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase">Seu Melhor E-mail</label>
+                    <input type="email" name="email" required placeholder="exemplo@transnet.com.br"
+                        class="w-full bg-slate-800 border border-slate-600 text-white p-4 rounded-xl focus:border-blue-500 outline-none transition-all">
+                </div>
+                <button type="submit"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg uppercase tracking-wider transition-all">
+                    Salvar e Acessar Painel
+                </button>
+            </form>
+        </div>
+    </div>
+    <script>document.body.style.overflow = 'hidden';</script>
+    {% endif %}
+
+    <button onclick="document.getElementById('modal-chamado').classList.remove('hidden')"
+        class="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-all hover:scale-110 z-50 group border border-blue-400">
+        <i data-lucide="life-buoy" size="28" class="animate-pulse"></i>
+        <span
+            class="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-800 text-white text-xs font-bold px-2 py-1 rounded border border-slate-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            Abrir Chamado
+        </span>
+    </button>
+
+    <div id="modal-chamado"
+        class="fixed inset-0 bg-black/90 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-slate-900 w-full max-w-lg rounded-2xl border border-blue-500/30 shadow-2xl p-6 relative">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
+                <h3 class="text-white font-black uppercase text-lg italic flex items-center gap-2">
+                    <i data-lucide="message-circle" class="text-blue-500"></i> Falar com Dev
+                </h3>
+                <button onclick="document.getElementById('modal-chamado').classList.add('hidden')"
+                    class="text-slate-500 hover:text-white">
+                    <i data-lucide="x" size="24"></i>
+                </button>
+            </div>
+            <form action="{{ url_for('abrir_chamado') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="mb-4">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assunto Resumido</label>
+                    <input type="text" name="titulo" required placeholder="Ex: Erro ao baixar Excel..."
+                        class="w-full bg-slate-800 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none font-bold">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Detalhes do Problema /
+                        Sugestão</label>
+                    <textarea name="mensagem" required rows="5" placeholder="Descreva o que aconteceu..."
+                        class="w-full bg-slate-800 border border-slate-600 text-white p-3 rounded-xl focus:border-blue-500 outline-none"></textarea>
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="document.getElementById('modal-chamado').classList.add('hidden')"
+                        class="flex-1 bg-slate-800 text-slate-400 py-3 rounded-xl font-bold hover:bg-slate-700">Cancelar</button>
+                    <button type="submit"
+                        class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
+                        <i data-lucide="send" size="16"></i> ENVIAR
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        try { lucide.createIcons(); } catch (e) { console.warn('Lucide não carregado:', e); }
+
+        let notificacaoAtiva = false;
+        let idOcorrenciaAtual = null;
+        let fotoAtual = null;
+
+        function toggleFiltro() {
+            document.getElementById('filtro-container').classList.toggle('aberto');
+        }
+
+        // Funções da Sidebar de Notificação
+        function toggleNotificacoes() {
+            const painel = document.getElementById('painel-notificacoes');
+            painel.classList.toggle('translate-x-full');
+        }
+
+        function renderizarNotificacoes(dados) {
+            const lista = document.getElementById('lista-notificacoes');
+            const badge = document.getElementById('badge-notificacao');
+            const pedidos = dados.filter(d => d.status_edicao === 'SOLICITADO');
+
+            if (pedidos.length > 0) {
+                if (badge) badge.classList.remove('hidden');
+                lista.innerHTML = pedidos.map(p => `
+                    <div id="notif-${p.id}" class="bg-slate-800 border border-slate-700 p-4 rounded-xl transition-all duration-500">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-black text-blue-400 uppercase">Ocorrência #${p.id}</span>
+                            <span class="text-[9px] text-slate-500 font-bold">${p.data_ocorrencia}</span>
+                        </div>
+                        <p class="text-white text-xs font-bold mb-1">${p.cliente}</p>
+                        <p class="text-slate-400 text-[11px] italic mb-4 leading-tight">"${p.motivo_edicao}"</p>
+                        <div class="flex gap-2">
+                            <button onclick="acaoNotificacao(${p.id}, 'liberar')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black py-2 rounded-lg uppercase">Aceitar</button>
+                            <button onclick="acaoNotificacao(${p.id}, 'recusar')" class="flex-1 bg-red-600 hover:bg-red-500 text-white text-[10px] font-black py-2 rounded-lg uppercase">Recusar</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                if (badge) badge.classList.add('hidden');
+                lista.innerHTML = '<p class="text-slate-600 text-xs text-center italic mt-10">Nenhuma solicitação pendente.</p>';
+            }
+        }
+
+        function acaoNotificacao(id, acao) {
+            const elemento = document.getElementById(`notif-${id}`);
+            if (elemento) {
+                elemento.style.transform = 'translateX(100%)';
+                elemento.style.opacity = '0';
+            }
+            setTimeout(() => {
+                const rota = acao === 'liberar' ? `/liberar_edicao/${id}` : `/recusar_edicao/${id}`;
+                fetch(rota).then(() => { location.reload(); });
+            }, 300);
+        }
+
+        // Funções da Galeria
+        function abrirGaleria(id, fotos) {
+            idOcorrenciaAtual = id;
+            document.getElementById('modal-id-display').innerText = id;
+            document.getElementById('modal-galeria').classList.remove('hidden');
+            renderizarGaleria(fotos);
+        }
+
+        function fecharModal() {
+            document.getElementById('modal-galeria').classList.add('hidden');
+        }
+
+        function renderizarGaleria(fotos) {
+            const grid = document.getElementById('grid-miniaturas');
+            const imgGrande = document.getElementById('imagem-grande');
+            const empty = document.getElementById('empty-state');
+            const btnApagar = document.getElementById('btn-apagar-foto'); // Pega o botão
+            grid.innerHTML = '';
+
+            if (fotos && fotos.length > 0) {
+                imgGrande.classList.remove('hidden');
+                empty.classList.add('hidden');
+                btnApagar.classList.remove('hidden'); // Mostra a lixeira
+
+                imgGrande.src = BASE_URL + '/static/uploads/' + fotos[0];
+                fotoAtual = fotos[0]; // Salva o nome da primeira foto
+
+                fotos.forEach((foto, index) => {
+                    const div = document.createElement('div');
+                    div.className = `h-16 rounded border-2 border-slate-700 overflow-hidden cursor-pointer hover:border-blue-500 transition-all ${index === 0 ? 'border-blue-500' : ''}`;
+                    div.innerHTML = `<img src="${BASE_URL}/static/uploads/${foto}" class="w-full h-full object-cover">`;
+                    div.onclick = () => {
+                        imgGrande.src = BASE_URL + '/static/uploads/' + foto;
+                        fotoAtual = foto; // Atualiza o nome da foto quando clica
+                        document.querySelectorAll('#grid-miniaturas div').forEach(d => d.classList.remove('border-blue-500'));
+                        div.classList.add('border-blue-500');
+                    };
+                    grid.appendChild(div);
+                });
+            } else {
+                imgGrande.classList.add('hidden');
+                empty.classList.remove('hidden');
+                btnApagar.classList.add('hidden'); // Esconde a lixeira se não tem foto
+                fotoAtual = null;
+            }
+            document.getElementById('btn-upload-label').style.display = (fotos && fotos.length >= 5) ? 'none' : 'flex';
+            lucide.createIcons();
+        }
+
+        function apagarFotoAtual() {
+            if (!fotoAtual || !idOcorrenciaAtual) return;
+
+            if (!confirm('Tem certeza que deseja apagar esta evidência permanentemente?')) return;
+
+            fetch(`${BASE_URL}/apagar_foto/${idOcorrenciaAtual}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({ foto: fotoAtual })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.sucesso) {
+                        location.reload(); // Recarrega para atualizar a galeria
+                    } else {
+                        alert("Erro ao apagar: " + data.erro);
+                    }
+                })
+                .catch(err => console.error("Erro:", err));
+        }
+
+        function excluirOcorrencia(id) {
+            const confirmacao = confirm(`ATENÇÃO: Tem certeza que deseja excluir DEFINITIVAMENTE a ocorrência #${id}?\n\nEsta ação apagará todos os dados e fotos vinculadas, e não poderá ser desfeita.`);
+
+            if (confirmacao) {
+                fetch(`${BASE_URL}/excluir_ocorrencia/${id}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': CSRF_TOKEN }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.sucesso) {
+                            location.reload();
+                        } else {
+                            alert("Erro ao excluir: " + data.erro);
+                        }
+                    })
+                    .catch(erro => console.error("Erro na requisição:", erro));
+            }
+        }
+
+        // --- LÓGICA DO TEMA CLARO/ESCURO CORRIGIDA ---
+        function alternarTema() {
+            const body = document.body;
+            const isLight = body.classList.toggle('light-mode');
+            localStorage.setItem('temaPreferencia', isLight ? 'light' : 'dark');
+            atualizarIconeTema(isLight);
+        }
+
+        function atualizarIconeTema(isLight) {
+            // Usa querySelectorAll para pegar TODOS os botões de tema (topo e barra)
+            const moons = document.querySelectorAll('.icon-moon');
+            const suns = document.querySelectorAll('.icon-sun');
+
+            if (isLight) {
+                moons.forEach(m => m.classList.remove('hidden'));
+                suns.forEach(s => s.classList.add('hidden'));
+            } else {
+                moons.forEach(m => m.classList.add('hidden'));
+                suns.forEach(s => s.classList.remove('hidden'));
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const preferencia = localStorage.getItem('temaPreferencia');
+            if (preferencia === 'light') {
+                document.body.classList.add('light-mode');
+                atualizarIconeTema(true);
+            } else {
+                atualizarIconeTema(false);
+            }
+            lucide.createIcons();
+        });
+
+        function enviarFoto() {
+            const input = document.getElementById('input-foto');
+            if (!input.files[0]) return;
+            const formData = new FormData();
+            formData.append('foto', input.files[0]);
+
+            fetch(`${BASE_URL}/upload_foto/${idOcorrenciaAtual}`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF_TOKEN },
+                body: formData
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.sucesso) { location.reload(); }
+                    else { alert(data.erro); }
+                })
+                .catch(err => console.error("Erro no upload:", err));
+        }
+
+        // Relógio TV
+        if (document.getElementById('relogio-tv')) {
+            function atualizarRelogio() {
+                const agora = new Date();
+                document.getElementById('relogio-tv').innerText = String(agora.getHours()).padStart(2, '0') + ":" + String(agora.getMinutes()).padStart(2, '0');
+                document.getElementById('data-completa').innerText = agora.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+                document.getElementById('dia-semana').innerText = agora.toLocaleDateString('pt-BR', { weekday: 'long' });
+            }
+            setInterval(atualizarRelogio, 1000);
+            atualizarRelogio();
+        }
+
+        // Som de Alerta (Gerente)
+        function verificarPendenciasEdicao(dados) {
+            {% if current_user.nivel in ['gerencial', 'desenvolvedor'] %}
+            const temPedido = dados.some(d => d.status_edicao === 'SOLICITADO');
+            if (temPedido && !notificacaoAtiva) {
+                const audio = document.getElementById('audio-alerta');
+                if (audio) audio.play().catch(e => console.log("Interação necessária para som"));
+                notificacaoAtiva = true;
+                document.title = "⚠️ NOVO PEDIDO DE EDIÇÃO";
+            } else if (!temPedido) {
+                notificacaoAtiva = false;
+                document.title = "Painel Operacional";
+            }
+            {% endif %}
+        }
+
+        // ATUALIZAÇÃO AUTOMÁTICA
+        setInterval(function () {
+            const params = new URLSearchParams(window.location.search);
+            fetch(BASE_URL + '/atualizar_cards?' + params.toString())
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('container-cards').innerHTML = data.html;
+                    if (document.getElementById('contador-andamento')) document.getElementById('contador-andamento').innerText = data.metricas.andamento;
+                    if (document.getElementById('contador-resolvidas')) document.getElementById('contador-resolvidas').innerText = data.metricas.resolvidas;
+                    if (document.getElementById('contador-atrasadas')) document.getElementById('contador-atrasadas').innerText = data.metricas.atrasadas;
+                    if (document.getElementById('contador-total')) document.getElementById('contador-total').innerText = data.metricas.total;
+                    lucide.createIcons();
+                    if (data.ocorrencias) {
+                        verificarPendenciasEdicao(data.ocorrencias);
+                        renderizarNotificacoes(data.ocorrencias);
+                    }
+                })
+                .catch(err => console.error('Erro na atualização:', err));
+        }, 3000);
+
+        function abrirModalSolicitacao(id) {
+            const modal = document.getElementById('modal-motivo-solicitacao');
+            const form = document.getElementById('form-solicitar');
+            form.action = `/solicitar_edicao/${id}`;
+            modal.classList.remove('hidden');
+        }
+
+        function fecharModalSolicitacao() {
+            document.getElementById('modal-motivo-solicitacao').classList.add('hidden');
+        }
+
+        // Scripts do Modal de Patch (Inserir Texto)
+        function inserirTexto(texto) {
+            const textarea = document.getElementById('input-itens');
+            const active = document.activeElement;
+            const target = (active && active.id === 'input-titulo') ? active : textarea;
+            const start = target.selectionStart;
+            const end = target.selectionEnd;
+            target.value = target.value.substring(0, start) + texto + target.value.substring(end);
+            target.selectionStart = target.selectionEnd = start + texto.length;
+            target.focus();
+        }
+
+        function inserirTag(tagIni, tagFim) {
+            const textarea = document.getElementById('input-itens');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selecionado = textarea.value.substring(start, end);
+            textarea.value = textarea.value.substring(0, start) + tagIni + selecionado + tagFim + textarea.value.substring(end);
+            textarea.selectionStart = start + tagIni.length;
+            textarea.selectionEnd = end + tagIni.length;
+            textarea.focus();
+        }
+
+        const modalPatch = document.getElementById('modal-aviso-patch');
+        if (modalPatch) {
+            let segundosRestantes = 7;
+            const botao = modalPatch.querySelector('button');
+            const textoOriginal = "ENTENDI! 🚀";
+            botao.innerText = `${textoOriginal} (${segundosRestantes}s)`;
+            const contagem = setInterval(() => {
+                segundosRestantes--;
+                botao.innerText = `${textoOriginal} (${segundosRestantes}s)`;
+                if (segundosRestantes <= 0) {
+                    clearInterval(contagem);
+                    modalPatch.style.transition = "opacity 0.5s";
+                    modalPatch.style.opacity = "0";
+                    setTimeout(() => modalPatch.remove(), 700);
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>

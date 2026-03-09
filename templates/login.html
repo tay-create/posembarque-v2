@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Acesso Restrito | Transnet</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
+    <script src="{{ url_for('static', filename='lucide-0.263.0.min.js') }}"></script>
+    <style>
+        body {
+            background-color: #050505;
+            background-image: radial-gradient(circle at 50% 50%, #111827 0%, #000000 100%);
+            font-family: 'ui-sans-serif', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);
+        }
+
+        /* EFEITO NEON BRANCO (TRANSNET) */
+        .neon-white {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.6), 0 0 20px rgba(255, 255, 255, 0.4), 0 0 30px rgba(255, 255, 255, 0.2);
+        }
+
+        /* EFEITO NEON AZUL (TRAMONTINA) */
+        .neon-blue {
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .input-field:focus {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+            border-color: #3b82f6;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        .logo-float {
+            animation: float 5s ease-in-out infinite;
+        }
+    </style>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+
+<body class="h-screen flex items-center justify-center p-4">
+
+    <div class="glass-card w-full max-w-md p-10 rounded-3xl relative overflow-hidden">
+
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-900 via-blue-500 to-white opacity-80">
+        </div>
+
+        <div class="text-center mb-10">
+            <div
+                class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-slate-900/80 mb-6 logo-float border border-slate-700 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+                <i data-lucide="truck" size="40" class="text-white"></i>
+            </div>
+
+            <h1 class="text-4xl font-black text-white tracking-tighter uppercase italic neon-white mb-1">
+                TRANSNET
+            </h1>
+
+            <h2 class="text-lg font-extrabold text-blue-500 tracking-[0.2em] uppercase neon-blue">
+                OP. TRAMONTINA
+            </h2>
+        </div>
+
+        {% with messages = get_flashed_messages(category_filter=["login"]) %}
+        {% if messages %}
+        <div
+            class="mb-4 bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl text-xs font-bold text-center">
+            <i data-lucide="alert-circle" size="16"></i> {{ message }}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label
+                    class="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1 tracking-wider">Usuário</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                        <i data-lucide="user" size="18"></i>
+                    </div>
+                    <input type="text" name="username" required placeholder="ID de acesso..."
+                        class="input-field w-full bg-slate-950/50 border border-slate-700 text-white text-sm rounded-xl block pl-11 p-3.5 outline-none transition-all placeholder-slate-600 focus:bg-slate-900">
+                </div>
+            </div>
+
+            <div>
+                <label
+                    class="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1 tracking-wider">Senha</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
+                        <i data-lucide="lock" size="18"></i>
+                    </div>
+                    <input type="password" name="password" required placeholder="••••••••"
+                        class="input-field w-full bg-slate-950/50 border border-slate-700 text-white text-sm rounded-xl block pl-11 p-3.5 outline-none transition-all placeholder-slate-600 font-mono focus:bg-slate-900">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+                <label class="flex items-center cursor-pointer group">
+                    <input type="checkbox" name="remember"
+                        class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-blue-600 focus:ring-offset-slate-900 cursor-pointer">
+                    <span class="ml-2 text-xs font-bold text-slate-500 group-hover:text-white transition-colors">Manter
+                        conectado</span>
+                </label>
+            </div>
+
+            <button type="submit"
+                class="w-full bg-white hover:bg-slate-200 text-slate-900 font-black py-4 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all transform hover:scale-[1.02] flex justify-center items-center gap-2 uppercase tracking-wide text-sm mt-4">
+                Entrar no Sistema <i data-lucide="arrow-right" size="18"></i>
+            </button>
+        </form>
+
+        <div class="mt-4 text-center">
+            <a href="{{ url_for('esqueci_senha') }}"
+                class="text-xs font-bold text-slate-500 hover:text-blue-400 transition-colors uppercase tracking-widest">
+                Esqueci minha senha
+            </a>
+        </div>
+
+        <div class="mt-8 text-center opacity-40 hover:opacity-100 transition-opacity">
+            <p class="text-[10px] text-slate-500 uppercase font-mono">
+                Created in 2026 • Will ~ TRANSNET
+            </p>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
