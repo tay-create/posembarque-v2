@@ -312,7 +312,7 @@
                     {% if current_user.nivel == 'desenvolvedor' %}
                     <a href="{{ url_for('central_chamados') }}"
                         class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 border border-indigo-400 transition-all">
-                        <i data-lucide="headset" size="16"></i> Suporte
+                        <i data-lucide="headphones" size="16"></i> Suporte
                     </a>
 
                     <button onclick="document.getElementById('modal-criar-patch').classList.remove('hidden')"
@@ -884,8 +884,20 @@
         setInterval(function () {
             const params = new URLSearchParams(window.location.search);
             fetch(BASE_URL + '/atualizar_cards?' + params.toString())
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok || response.redirected) {
+                        window.location.href = BASE_URL + '/login';
+                        return null;
+                    }
+                    const ct = response.headers.get('content-type');
+                    if (!ct || !ct.includes('application/json')) {
+                        window.location.href = BASE_URL + '/login';
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data) return;
                     document.getElementById('container-cards').innerHTML = data.html;
                     if (document.getElementById('contador-andamento')) document.getElementById('contador-andamento').innerText = data.metricas.andamento;
                     if (document.getElementById('contador-resolvidas')) document.getElementById('contador-resolvidas').innerText = data.metricas.resolvidas;
