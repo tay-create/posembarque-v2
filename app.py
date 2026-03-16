@@ -42,7 +42,7 @@ PG_CONFIG = {
     'password': os.environ.get('DB_PASSWORD', '')
 }
 app.secret_key = os.environ.get('SECRET_KEY', '')
-app.permanent_session_lifetime = timedelta(hours=4)
+app.permanent_session_lifetime = timedelta(hours=2)
 app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -80,6 +80,22 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.before_request
+def verificar_timeout_sessao():
+    if current_user.is_authenticated and current_user.nivel != 'tv':
+        if session.get('manter_conectado'):
+            return
+        ultima = session.get('ultima_atividade')
+        agora = datetime.now(BRT)
+        if ultima:
+            ultima_dt = datetime.fromisoformat(ultima)
+            if (agora - ultima_dt).total_seconds() > 7200:
+                logout_user()
+                session.clear()
+                flash('Sessão expirada por inatividade.', 'login')
+                return redirect(url_for('login'))
+        session['ultima_atividade'] = agora.isoformat()
+
 @app.after_request
 def set_security_headers(response):
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
@@ -104,7 +120,7 @@ def load_user(user_id):
     cur = conn.cursor()
     cur.execute("SELECT * FROM usuarios WHERE username = %s", (user_id,))
     u = cur.fetchone()
-    conn.close()
+    release_db_connection(conn)
 
     if u:
         return User(u['username'], u['nome'], u['nivel'], u['email'])
@@ -216,7 +232,7 @@ def init_cadastros_db():
     """)
 
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
     logger.info("Banco de dados verificando e atualizado!")
 
 with app.app_context():
@@ -236,51 +252,6 @@ def registrar_log(acao, detalhe):
     finally:
         release_db_connection(conn)
 
-def verificar_backup_automatico():
-    if current_user.nivel != 'desenvolvedor':
-        return
-    PASTA_BACKUP = os.path.join(BASE_DIR, 'backups_auto')
-
-    if not os.path.exists(PASTA_BACKUP):
-        try: os.makedirs(PASTA_BACKUP)
-        except OSError as e: logger.warning(f"Não foi possível criar pasta de backup: {e}")
-
-    agora = datetime.now()
-    dia = agora.day
-
-    if dia == 1 or dia == 16:
-        nome_arquivo = f"backup_auto_{agora.strftime('%Y_%m_%d')}.dump"
-        destino = os.path.join(PASTA_BACKUP, nome_arquivo)
-
-        if not os.path.exists(destino):
-            try:
-                env_backup = os.environ.copy()
-                env_backup['PGPASSWORD'] = PG_CONFIG['password']
-                resultado = subprocess.run([
-                    'pg_dump',
-                    '-U', PG_CONFIG["user"],
-                    '-h', PG_CONFIG["host"],
-                    '-p', str(PG_CONFIG["port"]),
-                    '-F', 'c',
-                    '-f', destino,
-                    PG_CONFIG["dbname"]
-                ], capture_output=True, text=True, env=env_backup)
-                if resultado.returncode == 0:
-                    logger.info(f"BACKUP AUTO: Criado {nome_arquivo}")
-                    registrar_log("SISTEMA", f"Backup quinzenal automático criado: {nome_arquivo}")
-
-                    arquivos = sorted(
-                        [os.path.join(PASTA_BACKUP, f) for f in os.listdir(PASTA_BACKUP)],
-                        key=os.path.getmtime
-                    )
-                    while len(arquivos) > 4:
-                        os.remove(arquivos[0])
-                        arquivos.pop(0)
-                else:
-                    logger.error(f"BACKUP AUTO: pg_dump falhou: {resultado.stderr}")
-            except Exception as e:
-                logger.error(f"Erro no backup auto: {e}")
-
 @app.route('/abrir_chamado', methods=['POST'])
 @login_required
 def abrir_chamado():
@@ -295,7 +266,7 @@ def abrir_chamado():
         VALUES (%s, %s, %s, %s)
     """, (current_user.nome, titulo, mensagem, agora))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
 
     registrar_log("SUPORTE", f"Novo chamado aberto por {current_user.nome}: {titulo}")
 
@@ -311,7 +282,7 @@ def central_chamados():
     cur = conn.cursor()
     cur.execute("SELECT * FROM chamados ORDER BY status ASC, id DESC")
     chamados = cur.fetchall()
-    conn.close()
+    release_db_connection(conn)
 
     return render_template('central_chamados.html', chamados=chamados)
 
@@ -331,7 +302,7 @@ def resolver_chamado(id):
         WHERE id = %s
     """, (resposta, agora, id))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
 
     registrar_log("SUPORTE", f"Chamado #{id} resolvido.")
     return redirect(url_for('central_chamados'))
@@ -351,7 +322,7 @@ def publicar_patch():
     cur.execute("INSERT INTO sistema_patches (titulo, itens, data_lancamento) VALUES (%s, %s, %s)",
                  (titulo, json.dumps(lista_itens), agora))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
 
     registrar_log("SISTEMA", F"Novo Patch lançado: {titulo}")
     return redirect(url_for('dashboard'))
@@ -383,7 +354,7 @@ def excluir_ocorrencia(id):
         logger.error(f"Erro ao excluir ocorrencia: {e}")
         return jsonify({'sucesso': False, 'erro': 'Erro interno no servidor.'})
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 @app.route('/upload_foto/<int:id>', methods=['POST'])
 @login_required
@@ -426,7 +397,7 @@ def upload_foto(id):
     fotos_atuais.append(nome_arquivo)
     cur.execute("UPDATE ocorrencias SET fotos = %s WHERE id = %s", (json.dumps(fotos_atuais), id))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
 
     registrar_log("UPLOAD", f"Foto adicionada à ocorrência {id}")
     return jsonify({'sucesso': True, 'foto': nome_arquivo})
@@ -469,7 +440,7 @@ def apagar_foto(id):
         logger.error(f"Erro ao apagar foto: {e}")
         return jsonify({'sucesso': False, 'erro': 'Erro interno no servidor.'})
     finally:
-        conn.close()
+        release_db_connection(conn)
 
 COLUNAS_PERMITIDAS = {
     'cliente': 'cliente', 'motorista': 'motorista', 'motivo': 'motivo',
@@ -532,7 +503,7 @@ def solicitar_edicao(id):
     cur = conn.cursor()
     cur.execute("UPDATE ocorrencias SET status_edicao = 'SOLICITADO', motivo_edicao = %s WHERE id = %s", (motivo, id,))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
     registrar_log("SOLICITAÇÃO", f"{current_user.nome} solicitou edição da ocorência {id}. Motivo: {motivo}")
     return redirect(url_for('dashboard'))
 
@@ -544,7 +515,7 @@ def recusar_edicao(id):
     cur = conn.cursor()
     cur.execute("UPDATE ocorrencias SET status_edicao = 'BLOQUEADO', motivo_edicao = NULL WHERE id = %s", (id,))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
     registrar_log("RECUSA", f"Gerente {current_user.nome} recusou edição da ocorrência {id}")
     return redirect(url_for('dashboard'))
 
@@ -557,14 +528,13 @@ def liberar_edicao(id):
     cur = conn.cursor()
     cur.execute("UPDATE ocorrencias SET status_edicao = 'AUTORIZADO' WHERE id = %s", (id,))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
     registrar_log("AUTORIZAÇÃO", f"Gerente {current_user.nome} liberou edição para ocorrência {id}")
     return redirect(url_for('dashboard'))
 
 @app.route('/')
 @login_required
 def dashboard():
-    verificar_backup_automatico()
     tipo_filtro = request.args.get('tipo'); termo_busca = request.args.get('busca')
     conn = get_db_connection()
     sql = 'SELECT * FROM ocorrencias WHERE (arquivado = 0 OR arquivado IS NULL)'; params = []
@@ -575,7 +545,7 @@ def dashboard():
     sql += ' ORDER BY id DESC'
     cur = conn.cursor()
     cur.execute(sql, params)
-    ocorrencias = cur.fetchall(); conn.close()
+    ocorrencias = cur.fetchall(); release_db_connection(conn)
 
     agora = agora_brt().replace(tzinfo=None); dados_processados = []
     metricas = {'total': 0, 'andamento': 0, 'resolvidas': 0, 'atrasadas': 0}
@@ -627,7 +597,7 @@ def dashboard():
                     cur2.execute("INSERT INTO sistema_views (usuario_id, patch_id, contagem) VALUES (%s, %s, 1)",
                                  (current_user.id, ultimo_patch['id']))
                 conn.commit()
-        conn.close()
+        release_db_connection(conn)
 
     return render_template('dashboard.html', dados=dados_processados, metricas=metricas, aviso_patch=aviso_patch)
 
@@ -641,7 +611,7 @@ def gerenciar_cadastros():
     motoristas = [r['nome'] for r in cur.fetchall()]
     cur.execute("SELECT nome FROM clientes ORDER BY nome")
     clientes = [r['nome'] for r in cur.fetchall()]
-    conn.close()
+    release_db_connection(conn)
     return render_template('cadastros.html', motoristas=motoristas, clientes=clientes)
 
 @app.route('/adicionar_item', methods=['POST'])
@@ -654,7 +624,7 @@ def adicionar_item():
         tabela = "motoristas" if tipo == "motorista" else "clientes"
         cur = conn.cursor()
         cur.execute(f"INSERT INTO {tabela} (nome) VALUES (%s) ON CONFLICT DO NOTHING", (nome,))
-        conn.commit(); conn.close()
+        conn.commit(); release_db_connection(conn)
         registrar_log("CADASTRO", f"Adicionado novo {tipo}: {nome}")
     except Exception as e: logger.error(f"Erro add: {e}")
     return redirect(url_for('gerenciar_cadastros'))
@@ -670,7 +640,7 @@ def remover_item(tipo, nome):
         cur = conn.cursor()
         cur.execute(f"DELETE FROM {tabela} WHERE nome = %s", (nome,))
         conn.commit()
-        conn.close()
+        release_db_connection(conn)
         registrar_log("CADASTRO", f"Removido {tipo}: {nome}")
     except Exception as e: logger.error(f"Erro ao remover: {e}")
     return redirect(url_for('gerenciar_cadastros'))
@@ -710,7 +680,7 @@ def arquivar_resolvidos():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE ocorrencias SET arquivado = 1 WHERE situacao = 'RESOLVIDO'")
-        conn.commit(); conn.close()
+        conn.commit(); release_db_connection(conn)
         registrar_log("ARQUIVAMENTO", "Limpeza de tela executada.")
         return redirect(url_for('dashboard'))
     except Exception as e: return f"Erro: {e}"
@@ -732,7 +702,7 @@ def exportar_pdf():
     cur = conn.cursor()
     cur.execute(query, params)
     ocorrencias_db = cur.fetchall()
-    conn.close()
+    release_db_connection(conn)
 
     dados_processados = []
 
@@ -786,64 +756,81 @@ def exportar_pdf():
     # Top 5 Motivos (Ordenado do maior pro menor)
     top_motivos = sorted(motivos_dict.items(), key=lambda x: x[1], reverse=True)[:5]
 
-    # 3. Gerador de Gráficos via QuickChart API
-    def gerar_grafico(config):
-        url = "https://quickchart.io/chart?w=800&h=400&bkg=white&c=" + urllib.parse.quote(json.dumps(config))
-        try:
-            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=10) as response:
-                return "data:image/png;base64," + base64.b64encode(response.read()).decode('utf-8')
-        except Exception as e:
-            logger.warning(f"Erro ao gerar gráfico QuickChart: {e}")
-            return ""
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import io
 
     # Total real para gráficos = apenas resolvidas + atrasadas
     total_operacoes = total_resolvidas + total_atrasadas
 
-    # JS para Gráficos de Pizza (Calcula a % baseada na soma das fatias)
-    js_pizza = "function(value, context) { var total = context.dataset.data.reduce(function(a, b){return a+b;}, 0); return value + ' (' + (value/total*100).toFixed(1) + '%)'; }"
+    def fig_to_base64(fig):
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', dpi=120)
+        buf.seek(0)
+        img = "data:image/png;base64," + base64.b64encode(buf.read()).decode('utf-8')
+        plt.close(fig)
+        return img
 
-    # JS para Barra (Calcula a % baseada no Total de Operações filtradas)
-    total_seguro = total_operacoes if total_operacoes > 0 else 1
-    js_barra = f"function(value) {{ return value + ' (' + (value / {total_seguro} * 100).toFixed(1) + '%)'; }}"
+    # Gráfico 1 — Volume por Operação (rosca)
+    img_ops = ""
+    if ops_dict:
+        fig, ax = plt.subplots(figsize=(7, 4), facecolor='white')
+        cores = ['#f97316','#3b82f6','#10b981','#8b5cf6','#ef4444','#eab308']
+        wedges, texts, autotexts = ax.pie(
+            list(ops_dict.values()),
+            labels=list(ops_dict.keys()),
+            autopct=lambda p: f'{int(round(p*sum(ops_dict.values())/100))}',
+            colors=cores[:len(ops_dict)],
+            pctdistance=0.7,
+            wedgeprops=dict(width=0.6)
+        )
+        for at in autotexts:
+            at.set_fontsize(10)
+            at.set_fontweight('bold')
+            at.set_color('white')
+        ax.set_title('VOLUME POR OPERAÇÃO', fontsize=13, fontweight='bold', pad=15)
+        img_ops = fig_to_base64(fig)
 
-    # Gráficos
-    img_ops = gerar_grafico({
-        "type": "doughnut",
-        "data": { "labels": list(ops_dict.keys()), "datasets": [{"data": list(ops_dict.values())}] },
-        "options": { "plugins": { "datalabels": { "display": True, "color": "#fff", "font": {"weight": "bold", "size": 14}, "formatter": js_pizza } } }
-    })
+    # Gráfico 2 — SLA (pizza resolvidas x atrasadas)
+    img_sla = ""
+    if total_operacoes > 0:
+        fig, ax = plt.subplots(figsize=(6, 4), facecolor='white')
+        valores = [total_resolvidas, total_atrasadas]
+        rotulos = ['Resolvidas', 'Atrasadas (>24h)']
+        cores_sla = ['#10b981', '#ef4444']
+        wedges, texts, autotexts = ax.pie(
+            valores,
+            labels=rotulos,
+            autopct=lambda p: f'{int(round(p*total_operacoes/100))}\n({p:.1f}%)',
+            colors=cores_sla,
+            pctdistance=0.65,
+            startangle=90
+        )
+        for at in autotexts:
+            at.set_fontsize(11)
+            at.set_fontweight('bold')
+            at.set_color('white')
+        ax.set_title('RESOLVIDAS X ATRASADAS (>24H)', fontsize=13, fontweight='bold', pad=15)
+        img_sla = fig_to_base64(fig)
 
-    img_sla = gerar_grafico({
-        "type": "pie",
-        "data": {
-            "labels": ["Resolvidas", "Atrasadas (>24h)"],
-            "datasets": [{"data": [total_resolvidas, total_atrasadas], "backgroundColor": ["#10b981", "#ef4444"]}]
-        },
-        "options": { "plugins": { "datalabels": { "display": True, "color": "#fff", "font": {"weight": "bold", "size": 16}, "formatter": js_pizza } } }
-    })
-
-    img_mot = gerar_grafico({
-        "type": "horizontalBar",
-        "data": {
-            "labels": [m[0] for m in top_motivos],
-            "datasets": [{"label": "Ocorrências", "data": [m[1] for m in top_motivos], "backgroundColor": "#3b82f6"}]
-        },
-        "options": {
-            "legend": { "display": False },
-            "scales": { "xAxes": [{"ticks": {"beginAtZero": True}}] },
-            "plugins": {
-                "datalabels": {
-                    "display": True,
-                    "color": "#fff",
-                    "anchor": "center",
-                    "align": "center",
-                    "font": {"weight": "bold", "size": 16},
-                    "formatter": js_barra
-                }
-            }
-        }
-    })
+    # Gráfico 3 — Top 5 Motivos (barra horizontal)
+    img_mot = ""
+    if top_motivos:
+        fig, ax = plt.subplots(figsize=(8, 4), facecolor='white')
+        motivos_labels = [m[0][:35] for m in top_motivos]
+        motivos_vals = [m[1] for m in top_motivos]
+        bars = ax.barh(motivos_labels, motivos_vals, color='#3b82f6')
+        total_s = total_operacoes if total_operacoes > 0 else 1
+        for bar, val in zip(bars, motivos_vals):
+            ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2,
+                    f'{val} ({val/total_s*100:.1f}%)', va='center', fontsize=9, fontweight='bold')
+        ax.set_xlim(0, max(motivos_vals) * 1.3)
+        ax.invert_yaxis()
+        ax.set_title('TOP 5 MOTIVOS DE OCORRÊNCIAS', fontsize=13, fontweight='bold', pad=15)
+        ax.set_xlabel('Quantidade')
+        fig.tight_layout()
+        img_mot = fig_to_base64(fig)
 
     # 4. Textos de Cabeçalho
     agora = agora_brt().replace(tzinfo=None)
@@ -857,9 +844,12 @@ def exportar_pdf():
     if request.args.get('modalidade'): filtros.append(f"Modalidade: {request.args.get('modalidade')}")
     filtros_texto = " | ".join(filtros) if filtros else "Visualizando todos os finalizados/atrasados."
 
-    # 5. Renderização do PDF
+    # 5. Renderização do PDF — divide dados em páginas de 30 linhas
+    LINHAS_POR_PAGINA = 22
+    chunks = [dados_processados[i:i+LINHAS_POR_PAGINA] for i in range(0, len(dados_processados), LINHAS_POR_PAGINA)] or [[]]
+
     html_renderizado = render_template('relatorio_pdf.html',
-                                       dados=dados_processados,
+                                       chunks=chunks,
                                        filtros_texto=filtros_texto,
                                        data_geracao=agora.strftime("%d/%m/%Y às %H:%M"),
                                        img_ops=img_ops, img_sla=img_sla, img_mot=img_mot,
@@ -869,13 +859,14 @@ def exportar_pdf():
     options = {
         'page-size': 'A4',
         'orientation': 'Landscape',
-        'margin-top': '0.4in',
+        'margin-top': '0.5in',
         'margin-right': '0.4in',
         'margin-bottom': '0.4in',
         'margin-left': '0.4in',
         'encoding': "UTF-8",
         'no-outline': None,
-        'enable-local-file-access': None
+        'enable-local-file-access': None,
+        'disable-smart-shrinking': None,
     }
 
     try:
@@ -897,12 +888,19 @@ def login():
         cur = conn.cursor()
         cur.execute("SELECT * FROM usuarios WHERE username = %s", (username,))
         user_data = cur.fetchone()
-        conn.close()
+        release_db_connection(conn)
 
         if user_data and user_data['senha'] and bcrypt.checkpw(password.encode('utf-8'), user_data['senha'].encode('utf-8')):
             user = User(user_data['username'], user_data['nome'], user_data['nivel'], user_data['email'])
-            login_user(user, remember=True)
+            is_tv = user_data['nivel'] == 'tv'
+            remember_me = request.form.get('remember') == 'on'
+            login_user(user, remember=is_tv or remember_me)
             session.permanent = True
+            if not is_tv:
+                if not remember_me:
+                    session['ultima_atividade'] = datetime.now(BRT).isoformat()
+                else:
+                    session['manter_conectado'] = True
             session['acabou_de_logar'] = True
             return redirect(url_for('dashboard'))
         else: flash('Usuário ou Senha incorretos.', 'login')
@@ -917,7 +915,7 @@ def salvar_email_usuario():
         cur = conn.cursor()
         cur.execute("UPDATE usuarios SET email = %s WHERE username = %s", (email, current_user.id))
         conn.commit()
-        conn.close()
+        release_db_connection(conn)
         flash("E-mail cadastrado com sucesso! Agora você pode recuperar sua senha.")
     return redirect(url_for('dashboard'))
 
@@ -939,7 +937,7 @@ def esqueci_senha():
             cur.execute("UPDATE usuarios SET token_reset = %s, token_expiracao = %s WHERE username = %s",
                          (token, expiracao, username))
             conn.commit()
-            conn.close()
+            release_db_connection(conn)
 
             link_reset = url_for('resetar_senha', token=token, _external=True)
 
@@ -960,7 +958,7 @@ def esqueci_senha():
 
             return redirect(url_for('login'))
 
-        conn.close()
+        release_db_connection(conn)
         flash("Dados não conferem.")
     return render_template('esqueci_senha.html')
 
@@ -972,12 +970,12 @@ def resetar_senha(token):
     user = cur.fetchone()
 
     if not user:
-        conn.close()
+        release_db_connection(conn)
         return "Link inválido ou já utilizado.", 404
 
     limite = datetime.strptime(user['token_expiracao'], "%Y-%m-%d %H:%M:%S")
     if datetime.now() > limite:
-        conn.close()
+        release_db_connection(conn)
         return "Este link Expirou. Solicite um novo.", 400
 
     if request.method == 'POST':
@@ -989,13 +987,13 @@ def resetar_senha(token):
             cur.execute("UPDATE usuarios SET senha = %s, token_reset = NULL, token_expiracao = NULL WHERE username = %s",
                          (hashed, user['username']))
             conn.commit()
-            conn.close()
+            release_db_connection(conn)
             flash("Senha alterada com sucesso! Faça login novamente.")
             return redirect(url_for('login'))
         else:
             flash("As senhas não coincidem.")
 
-    conn.close()
+    release_db_connection(conn)
     return render_template('resetar_senha.html', token=token)
 
 @app.route('/logout')
@@ -1014,7 +1012,7 @@ def cadastro():
     clientes = [r['nome'] for r in cur.fetchall()]
     cur.execute("SELECT DISTINCT motivo FROM ocorrencias WHERE motivo IS NOT NULL ORDER BY motivo")
     motivos = [r['motivo'] for r in cur.fetchall()]
-    conn.close()
+    release_db_connection(conn)
     return render_template('cadastro.html', motoristas=motoristas, clientes=clientes, motivos=motivos)
 
 @app.route('/salvar', methods=['POST'])
@@ -1030,7 +1028,7 @@ def salvar():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute('INSERT INTO ocorrencias (data_ocorrencia, hora_ocorrencia, motorista, modalidade, cte, operacao, nfs, cliente, cidade, motivo, situacao, responsavel, link_email) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', (data, hora, motorista, modalidade, cte, operacao, nfs, cliente, cidade, motivo, situacao, responsavel, link_email))
-        conn.commit(); conn.close()
+        conn.commit(); release_db_connection(conn)
         return redirect(url_for('cadastro', sucesso=True))
     except Exception as e: return f"Erro: {e}"
 
@@ -1040,7 +1038,7 @@ def concluir(id):
     agora = agora_brt().replace(tzinfo=None); conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('UPDATE ocorrencias SET situacao = %s, data_conclusao = %s, hora_conclusao = %s WHERE id = %s', ("RESOLVIDO", agora.strftime("%Y-%m-%d"), agora.strftime("%H:%M"), id))
-    conn.commit(); conn.close()
+    conn.commit(); release_db_connection(conn)
     registrar_log("CONCLUSAO", f"Ocorrência {id} concluída.")
     return redirect(url_for('dashboard'))
 
@@ -1059,7 +1057,7 @@ def editar(id):
         permissao = True
 
     if not permissao:
-        conn.close()
+        release_db_connection(conn)
         return "<script>alert('Acesso negado ou autorização pendente.'); window.history.back();</script>"
 
     cur2 = conn.cursor()
@@ -1069,7 +1067,7 @@ def editar(id):
     clientes = [r['nome'] for r in cur2.fetchall()]
     cur2.execute("SELECT DISTINCT motivo FROM ocorrencias WHERE motivo IS NOT NULL ORDER BY motivo")
     motivos = [r['motivo'] for r in cur2.fetchall()]
-    conn.close()
+    release_db_connection(conn)
     return render_template('editar.html', dado=dado, motoristas=motoristas, clientes=clientes, motivos=motivos)
 
 @app.route('/atualizar/<int:id>', methods=['POST'])
@@ -1088,7 +1086,7 @@ def atualizar(id):
         permissao = True
 
     if not permissao:
-        conn.close()
+        release_db_connection(conn)
         return "Acesso negado para salvar esta edição."
 
     try:
@@ -1103,7 +1101,7 @@ def atualizar(id):
 
         cur.execute('UPDATE ocorrencias SET data_ocorrencia=%s, motorista=%s, modalidade=%s, cte=%s, operacao=%s, nfs=%s, cliente=%s, cidade=%s, motivo=%s, status_edicao=%s, link_email=%s WHERE id=%s', (data, motorista, modalidade, cte, operacao, nfs, cliente, cidade, motivo, 'BLOQUEADO', link_email, id))
 
-        conn.commit(); conn.close()
+        conn.commit(); release_db_connection(conn)
         registrar_log("EDIÇÃO", f"Ocorrência {id} atualizada.")
         return redirect(url_for('dashboard'))
     except Exception as e: return f"Erro: {e}"
@@ -1124,7 +1122,7 @@ def relatorios():
     cur.execute("SELECT DISTINCT motivo FROM ocorrencias ORDER BY motivo")
     motivo_db = cur.fetchall()
     lista_motivos = [m['motivo'] for m in motivo_db if m['motivo']]
-    conn.close()
+    release_db_connection(conn)
 
     dados_graficos = {'ops': {}, 'sla': {'resolvido':0, 'atrasado':0}, 'motivos': {}}
     if not df.empty:
@@ -1169,7 +1167,7 @@ def logs():
     total_logs = cur.fetchone()['count']
     total_paginas = math.ceil(total_logs / itens_por_pagina)
     cur.execute('SELECT * FROM logs ORDER BY id DESC LIMIT %s OFFSET %s', (itens_por_pagina, offset))
-    logs_db = cur.fetchall(); conn.close()
+    logs_db = cur.fetchall(); release_db_connection(conn)
 
     logs_filtrados = []
     for log in logs_db:
@@ -1192,7 +1190,7 @@ def atualizar_cards():
         if col: sql += f" AND {col} LIKE %s"; params.append(f'%{termo_busca}%')
     sql += ' ORDER BY id DESC'
     cur.execute(sql, params)
-    ocorrencias = cur.fetchall(); conn.close()
+    ocorrencias = cur.fetchall(); release_db_connection(conn)
     agora = agora_brt().replace(tzinfo=None); dados_processados = []
     metricas = {'total': 0, 'andamento': 0, 'resolvidas': 0, 'atrasadas': 0}
 
@@ -1230,7 +1228,7 @@ def api_listas_cadastro():
     clientes = [r['nome'] for r in cur.fetchall()]
     cur.execute("SELECT DISTINCT motivo FROM ocorrencias WHERE motivo IS NOT NULL ORDER BY motivo")
     motivos = [r['motivo'] for r in cur.fetchall()]
-    conn.close()
+    release_db_connection(conn)
     return jsonify({'motoristas': motoristas, 'clientes': clientes, 'motivos': motivos})
 
 if __name__ == '__main__':
