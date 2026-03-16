@@ -50,12 +50,10 @@ Sistema web de gestão de ocorrências logísticas em tempo real, desenvolvido p
 
 ### Segurança
 - Autenticação com bcrypt
-- Rate limiting no login (10 tentativas/minuto)
 - Proteção CSRF (Flask-WTF)
 - Cookies HTTPOnly + Secure + SameSite=Lax
 - Headers de segurança: HSTS, X-Frame-Options, X-Content-Type-Options, XSS-Protection
 - Timeout de sessão por inatividade (2 horas)
-- Opção "Manter conectado" para sessões persistentes
 
 ---
 
