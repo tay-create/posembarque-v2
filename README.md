@@ -149,7 +149,7 @@ pip install -r requirements.txt
 Criar ficheiro `.env` na raiz do projeto:
 ```env
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=DB_PORT
 DB_NAME=posembarque-transnet
 DB_USER=postgres
 DB_PASSWORD=sua_password_postgres
