@@ -915,7 +915,7 @@
         function abrirModalSolicitacao(id) {
             const modal = document.getElementById('modal-motivo-solicitacao');
             const form = document.getElementById('form-solicitar');
-            form.action = `/solicitar_edicao/${id}`;
+            form.action = BASE_URL + `/solicitar_edicao/${id}`;
             modal.classList.remove('hidden');
         }
 
