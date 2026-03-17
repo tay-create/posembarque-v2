@@ -150,6 +150,18 @@
         setInterval(buscarAtualizacoes, 5000);
 
         buscarAtualizacoes();
-    </script>
+
+        // Recarregar página se ficar inativa mais de 30 minutos (garante token CSRF fresco)
+        let ultimaAtividade = Date.now();
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) {
+                if (Date.now() - ultimaAtividade > 30 * 60 * 1000) {
+                    window.location.reload();
+                }
+            } else {
+                ultimaAtividade = Date.now();
+            }
+        });
+</script>
 </body>
 </html>
