@@ -8,7 +8,6 @@
     <style>body { background-color: #0b0e14; }</style>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 <script>const BASE_URL = "{{ request.script_root }}";</script>
-<script>const BASE_URL = "{{ request.script_root }}";</script>
 </head>
 <body class="text-slate-200 flex items-center justify-center min-h-screen p-4">
 
@@ -137,12 +136,17 @@
 
         function buscarAtualizacoes() {
             fetch(BASE_URL + '/api/listas_cadastro')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok || response.redirected) { window.location.href = BASE_URL + '/login'; return null; }
+                    const ct = response.headers.get('content-type');
+                    if (!ct || !ct.includes('application/json')) { window.location.href = BASE_URL + '/login'; return null; }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data) return;
                     atualizarDatalist('lista-motoristas', data.motoristas);
                     atualizarDatalist('lista-clientes', data.clientes);
                     atualizarDatalist('lista-motivos', data.motivos);
-                    console.log("Listas sincronizadas com sucesso!");
                 })
                 .catch(erro => console.error("Erro ao sincronizar listas:", erro));
         }
