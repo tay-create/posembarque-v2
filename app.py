@@ -26,7 +26,10 @@ def agora_brt():
     """Retorna datetime atual no fuso horário de Brasília."""
     return datetime.now(BRT)
 
-logging.basicConfig(level=logging.WARNING, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
@@ -41,13 +44,13 @@ PG_CONFIG = {
     'password': os.environ.get('DB_PASSWORD', '')
 }
 app.secret_key = os.environ.get('SECRET_KEY', '')
-app.permanent_session_lifetime = timedelta(hours=2)
+app.permanent_session_lifetime = timedelta(hours=8)
 app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
+app.config['SESSION_COOKIE_NAME'] = 'posembarque_session'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['WTF_CSRF_TIME_LIMIT'] = 28800  # 8 horas
 app.config['DEBUG'] = False
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB limite de upload
 
@@ -81,26 +84,9 @@ def allowed_file(filename):
 
 @app.before_request
 def verificar_timeout_sessao():
-    if current_user.is_authenticated and current_user.nivel != 'tv':
-        if session.get('manter_conectado'):
-            return
-        ultima = session.get('ultima_atividade')
-        agora = datetime.now(BRT)
-        if ultima:
-            try:
-                ultima_dt = datetime.fromisoformat(ultima)
-                # Garantir que ambos têm timezone para comparação segura
-                if ultima_dt.tzinfo is None:
-                    ultima_dt = ultima_dt.replace(tzinfo=BRT)
-                if (agora - ultima_dt).total_seconds() > 7200:
-                    logout_user()
-                    session.clear()
-                    flash('Sessão expirada por inatividade.', 'login')
-                    return redirect(url_for('login'))
-            except Exception:
-                # Se der erro ao ler a data, apenas reseta sem deslogar
-                pass
-        session['ultima_atividade'] = agora.isoformat()
+    """Faz refresh da sessão a cada request para evitar expiração prematura."""
+    if session.get('_user_id'):  # Usuário está logado
+        session.modified = True  # Força o Flask a salvar/renovar o cookie
 
 @app.after_request
 def set_security_headers(response):
@@ -122,15 +108,20 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM usuarios WHERE username = %s", (user_id,))
-    u = cur.fetchone()
-    release_db_connection(conn)
-
-    if u:
-        return User(u['username'], u['nome'], u['nivel'], u['email'])
-    return None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM usuarios WHERE username = %s", (user_id,))
+        u = cur.fetchone()
+        release_db_connection(conn)
+        if u:
+            return User(u['username'], u['nome'], u['nivel'], u['email'])
+        logger.warning(f"load_user: usuário '{user_id}' não encontrado no banco.")
+        return None
+    except Exception as e:
+        logger.error(f"load_user: erro ao carregar usuário '{user_id}': {e}")
+        # Retorna None sem matar a sessão — o Flask-Login vai redirecionar ao login
+        return None
 
 # --- FUNÇÕES DE BANCO DE DADOS ---
 
@@ -140,15 +131,47 @@ db_pool = psycopg2.pool.SimpleConnectionPool(
     **PG_CONFIG
 )
 
+def _recriar_pool():
+    """Recria o pool quando as conexões estiverem mortas."""
+    global db_pool
+    try:
+        db_pool.closeall()
+    except Exception:
+        pass
+    logger.warning("Pool de conexões recriado após falha de conexão idle.")
+    db_pool = psycopg2.pool.SimpleConnectionPool(minconn=1, maxconn=10, **PG_CONFIG)
+
 def get_db_connection():
-    conn = db_pool.getconn()
-    conn.cursor_factory = psycopg2.extras.RealDictCursor
-    return conn
+    """Retorna conexão válida do pool, reconectando automaticamente se necessário."""
+    global db_pool
+    try:
+        conn = db_pool.getconn()
+        if conn.closed:
+            raise psycopg2.OperationalError("Conexão fechada.")
+        # Ping leve para detectar conexões idle expiradas pelo PostgreSQL
+        try:
+            conn.cursor().execute("SELECT 1")
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            try:
+                db_pool.putconn(conn)
+            except Exception:
+                pass
+            raise psycopg2.OperationalError("Conexão idle expirada.")
+        conn.cursor_factory = psycopg2.extras.RealDictCursor
+        return conn
+    except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+        logger.warning(f"Reconectando ao banco de dados: {e}")
+        _recriar_pool()
+        conn = db_pool.getconn()
+        conn.cursor_factory = psycopg2.extras.RealDictCursor
+        return conn
 
 def release_db_connection(conn):
-    """Devolve a conexão ao pool em vez de fechar."""
+    """Devolve a conexão ao pool, garantindo que está limpa."""
     if conn:
         try:
+            if not conn.closed:
+                conn.rollback()  # Limpa transações pendentes
             db_pool.putconn(conn)
         except Exception:
             pass

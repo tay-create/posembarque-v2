@@ -1,42 +1,11 @@
-# Credenciais — NUNCA commitar
-.env
-
-# Database
+gunicorn.ctl
 painel.db
-
-# Backups
-backups_auto/
-
-# Uploads
-uploads/
-static/uploads/
-
-# Tailwind CLI binário
-static/tailwindcss
-
-# Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.Python
-env/
+.env
+static/uploads/*
+!static/uploads/.gitkeep
 venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.cache
-nosetests.xml
-coverage.xml
-*,cover
-.hypothesis/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Arquivos de trabalho/migração
-*.resolved
-migrate_to_postgres.py
-convert_queries.py
+node_modules/
+static/tailwindcss
+*.log
