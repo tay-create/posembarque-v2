@@ -34,7 +34,6 @@
                 </h2>
                 
                 <form action="{{ url_for('adicionar_item') }}" method="POST" class="flex gap-2 mb-6">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="tipo" value="motorista">
                     <input type="text" name="nome" required placeholder="Nome do Motorista..." 
                            class="flex-1 bg-slate-900 border border-slate-600 text-white p-3 rounded-xl outline-none focus:border-orange-500 uppercase">
@@ -63,7 +62,6 @@
                 </h2>
 
                 <form action="{{ url_for('adicionar_item') }}" method="POST" class="flex gap-2 mb-6">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="tipo" value="cliente">
                     <input type="text" name="nome" required placeholder="Nome do Cliente..." 
                            class="flex-1 bg-slate-900 border border-slate-600 text-white p-3 rounded-xl outline-none focus:border-emerald-500 uppercase">

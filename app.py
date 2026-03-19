@@ -7,7 +7,6 @@ from flask import Flask, render_template, request, redirect, url_for, send_file,
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_wtf.csrf import CSRFProtect
 import psycopg2
 import psycopg2.extras
 import psycopg2.pool
@@ -63,14 +62,6 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER'] = ('Suporte Transnet', app.config['MAIL_USERNAME'])
 
 mail = Mail(app)
-csrf = CSRFProtect(app)
-
-from flask_wtf.csrf import CSRFError
-
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-    flash('Sua sessão expirou. Por favor, faça login novamente.', 'login')
-    return redirect(url_for('login'))
 
 limiter = Limiter(
     get_remote_address,
@@ -96,12 +87,19 @@ def verificar_timeout_sessao():
         ultima = session.get('ultima_atividade')
         agora = datetime.now(BRT)
         if ultima:
-            ultima_dt = datetime.fromisoformat(ultima)
-            if (agora - ultima_dt).total_seconds() > 7200:
-                logout_user()
-                session.clear()
-                flash('Sessão expirada por inatividade.', 'login')
-                return redirect(url_for('login'))
+            try:
+                ultima_dt = datetime.fromisoformat(ultima)
+                # Garantir que ambos têm timezone para comparação segura
+                if ultima_dt.tzinfo is None:
+                    ultima_dt = ultima_dt.replace(tzinfo=BRT)
+                if (agora - ultima_dt).total_seconds() > 7200:
+                    logout_user()
+                    session.clear()
+                    flash('Sessão expirada por inatividade.', 'login')
+                    return redirect(url_for('login'))
+            except Exception:
+                # Se der erro ao ler a data, apenas reseta sem deslogar
+                pass
         session['ultima_atividade'] = agora.isoformat()
 
 @app.after_request

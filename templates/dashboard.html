@@ -3,7 +3,6 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Painel Operacional</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.css') }}">
@@ -193,7 +192,6 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <script>
         const BASE_URL = "{{ request.script_root }}";
-        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     </script>
 </head>
 
@@ -464,7 +462,6 @@
                 <i data-lucide="code-2"></i> Nova Atualização
             </h3>
             <form action="{{ url_for('publicar_patch') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label class="block text-xs font-bold text-slate-500 mb-1">VERSÃO/TÍTULO</label>
                 <input type="text" name="titulo" id="input-titulo" required
                     class="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl mb-4 focus:border-purple-500 outline-none placeholder-slate-600"
@@ -547,7 +544,6 @@
         <div class="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 p-6 shadow-2xl">
             <h3 class="text-white font-black uppercase mb-4">Justificativa de Edição</h3>
             <form id="form-solicitar" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <textarea name="motivo_texto" required rows="4"
                     class="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl mb-4 outline-none focus:border-orange-500"
                     placeholder="Descreva o que precisa ser alterado..."></textarea>
@@ -589,7 +585,6 @@
                 corporativo ou pessoal.
             </p>
             <form action="{{ url_for('salvar_email_usuario') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-4 text-left">
                     <label class="text-[10px] font-bold text-slate-500 uppercase">Seu Melhor E-mail</label>
                     <input type="email" name="email" required placeholder="exemplo@transnet.com.br"
@@ -627,7 +622,6 @@
                 </button>
             </div>
             <form action="{{ url_for('abrir_chamado') }}" method="POST">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="mb-4">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assunto Resumido</label>
                     <input type="text" name="titulo" required placeholder="Ex: Erro ao baixar Excel..."
@@ -764,8 +758,7 @@
             fetch(`${BASE_URL}/apagar_foto/${idOcorrenciaAtual}`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': CSRF_TOKEN
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ foto: fotoAtual })
             })
@@ -785,8 +778,7 @@
 
             if (confirmacao) {
                 fetch(`${BASE_URL}/excluir_ocorrencia/${id}`, {
-                    method: 'POST',
-                    headers: { 'X-CSRFToken': CSRF_TOKEN }
+                    method: 'POST'
                 })
                     .then(response => response.json())
                     .then(data => {
@@ -841,7 +833,6 @@
 
             fetch(`${BASE_URL}/upload_foto/${idOcorrenciaAtual}`, {
                 method: 'POST',
-                headers: { 'X-CSRFToken': CSRF_TOKEN },
                 body: formData
             })
                 .then(res => res.json())

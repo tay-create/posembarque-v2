@@ -2,7 +2,6 @@ flask
 flask-login
 flask-mail
 flask-limiter
-flask-wtf
 bcrypt
 pdfkit
 pandas
