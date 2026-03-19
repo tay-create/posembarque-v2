@@ -46,7 +46,7 @@ app.permanent_session_lifetime = timedelta(hours=2)
 app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['WTF_CSRF_TIME_LIMIT'] = 28800  # 8 horas
 app.config['DEBUG'] = False
@@ -64,6 +64,13 @@ app.config['MAIL_DEFAULT_SENDER'] = ('Suporte Transnet', app.config['MAIL_USERNA
 
 mail = Mail(app)
 csrf = CSRFProtect(app)
+
+from flask_wtf.csrf import CSRFError
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    flash('Sua sessão expirou. Por favor, faça login novamente.', 'login')
+    return redirect(url_for('login'))
 
 limiter = Limiter(
     get_remote_address,
