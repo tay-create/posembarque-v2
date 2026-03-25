@@ -108,20 +108,30 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
+    conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT * FROM usuarios WHERE username = %s", (user_id,))
         u = cur.fetchone()
-        release_db_connection(conn)
         if u:
+            session['user_cache'] = {
+                'id': u['username'], 'nome': u['nome'],
+                'nivel': u['nivel'], 'email': u['email']
+            }
             return User(u['username'], u['nome'], u['nivel'], u['email'])
-        logger.warning(f"load_user: usuário '{user_id}' não encontrado no banco.")
+        logger.warning(f"load_user: utilizador '{user_id}' não encontrado no banco.")
         return None
     except Exception as e:
-        logger.error(f"load_user: erro ao carregar usuário '{user_id}': {e}")
-        # Retorna None sem matar a sessão — o Flask-Login vai redirecionar ao login
+        logger.error(f"load_user: erro DB '{user_id}': {e}")
+        cache = session.get('user_cache')
+        if cache and cache.get('id') == user_id:
+            logger.warning(f"load_user: usando cache de sessão para '{user_id}'")
+            return User(cache['id'], cache['nome'], cache['nivel'], cache.get('email'))
         return None
+    finally:
+        if conn:
+            release_db_connection(conn)
 
 # --- FUNÇÕES DE BANCO DE DADOS ---
 
@@ -925,6 +935,10 @@ def login():
             remember_me = request.form.get('remember') == 'on'
             login_user(user, remember=is_tv or remember_me)
             session.permanent = True
+            session['user_cache'] = {
+                'id': user_data['username'], 'nome': user_data['nome'],
+                'nivel': user_data['nivel'], 'email': user_data['email']
+            }
             if not is_tv:
                 if not remember_me:
                     session['ultima_atividade'] = datetime.now(BRT).isoformat()
