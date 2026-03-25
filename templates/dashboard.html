@@ -696,7 +696,7 @@
                 elemento.style.opacity = '0';
             }
             setTimeout(() => {
-                const rota = acao === 'liberar' ? `/liberar_edicao/${id}` : `/recusar_edicao/${id}`;
+                const rota = acao === 'liberar' ? `${BASE_URL}/liberar_edicao/${id}` : `${BASE_URL}/recusar_edicao/${id}`;
                 fetch(rota).then(() => { location.reload(); });
             }, 300);
         }
