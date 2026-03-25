@@ -30,6 +30,10 @@ def test_load_user_retorna_user_do_db_quando_db_ok():
                 assert user is not None
                 assert user.id == 'tv1'
                 assert user.nivel == 'tv'
+                from flask import session
+                assert session.get('user_cache') == {
+                    'id': 'tv1', 'nome': 'TV Sala', 'nivel': 'tv', 'email': None
+                }
 
 
 def test_load_user_usa_cache_quando_db_falha():

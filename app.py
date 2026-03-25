@@ -114,6 +114,7 @@ def load_user(user_id):
         cur = conn.cursor()
         cur.execute("SELECT * FROM usuarios WHERE username = %s", (user_id,))
         u = cur.fetchone()
+        cur.close()
         if u:
             session['user_cache'] = {
                 'id': u['username'], 'nome': u['nome'],
@@ -121,6 +122,7 @@ def load_user(user_id):
             }
             return User(u['username'], u['nome'], u['nivel'], u['email'])
         logger.warning(f"load_user: utilizador '{user_id}' não encontrado no banco.")
+        # Utilizador não encontrado no DB — não usar fallback de cache (diferente de falha de DB)
         return None
     except Exception as e:
         logger.error(f"load_user: erro DB '{user_id}': {e}")
