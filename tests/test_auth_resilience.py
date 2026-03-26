@@ -70,3 +70,29 @@ def test_load_user_liberta_conexao_mesmo_com_excecao():
             with patch.object(flask_app, 'release_db_connection') as mock_release:
                 flask_app.load_user('tv1')
                 mock_release.assert_called_once_with(mock_conn)
+
+
+# --- Task 2: lifetime dinâmico por nível ---
+
+def test_sessao_tv_tem_lifetime_30_dias():
+    """Sessão TV deve ter permanent_session_lifetime de 30 dias."""
+    from datetime import timedelta
+
+    with flask_app.app.test_request_context():
+        from flask import session as s
+        s['_user_id'] = 'tv1'
+        s['user_cache'] = {'id': 'tv1', 'nome': 'TV', 'nivel': 'tv', 'email': None}
+        flask_app.verificar_timeout_sessao()
+        assert flask_app.app.permanent_session_lifetime == timedelta(days=30)
+
+
+def test_sessao_outros_niveis_tem_lifetime_8h():
+    """Sessão de utilizadores normais deve manter lifetime de 8 horas."""
+    from datetime import timedelta
+
+    with flask_app.app.test_request_context():
+        from flask import session as s
+        s['_user_id'] = 'user1'
+        s['user_cache'] = {'id': 'user1', 'nome': 'Ops', 'nivel': 'operacional', 'email': None}
+        flask_app.verificar_timeout_sessao()
+        assert flask_app.app.permanent_session_lifetime == timedelta(hours=8)

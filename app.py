@@ -84,9 +84,14 @@ def allowed_file(filename):
 
 @app.before_request
 def verificar_timeout_sessao():
-    """Faz refresh da sessão a cada request para evitar expiração prematura."""
-    if session.get('_user_id'):  # Usuário está logado
-        session.modified = True  # Força o Flask a salvar/renovar o cookie
+    """Faz refresh da sessão a cada request. TV tem lifetime de 30 dias; outros 8h."""
+    if session.get('_user_id'):
+        nivel = session.get('user_cache', {}).get('nivel')
+        if nivel == 'tv':
+            app.permanent_session_lifetime = timedelta(days=30)
+        else:
+            app.permanent_session_lifetime = timedelta(hours=8)
+        session.modified = True
 
 @app.after_request
 def set_security_headers(response):
