@@ -185,6 +185,10 @@ def get_db_connection():
         logger.warning(f"Reconectando ao banco de dados: {e}")
         _recriar_pool()
         conn = db_pool.getconn()
+        try:
+            conn.cursor().execute("SELECT 1")
+        except Exception as e2:
+            raise psycopg2.OperationalError(f"Pool recriado mas conexão ainda inválida: {e2}")
         conn.cursor_factory = psycopg2.extras.RealDictCursor
         return conn
 

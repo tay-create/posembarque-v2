@@ -1,4 +1,5 @@
 import pytest
+import psycopg2
 from unittest.mock import patch, MagicMock
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -96,3 +97,39 @@ def test_sessao_outros_niveis_tem_lifetime_8h():
         s['user_cache'] = {'id': 'user1', 'nome': 'Ops', 'nivel': 'operacional', 'email': None}
         flask_app.verificar_timeout_sessao()
         assert flask_app.app.permanent_session_lifetime == timedelta(hours=8)
+
+
+# --- Task 3: pool robusto após reconexão ---
+
+def test_get_db_connection_reconecta_e_verifica_nova_conexao():
+    """get_db_connection verifica a nova conexão após recriar o pool."""
+    mock_bad_conn = MagicMock()
+    mock_bad_conn.closed = False
+    mock_bad_conn.cursor.return_value.execute.side_effect = psycopg2.OperationalError("idle expired")
+
+    mock_good_conn = MagicMock()
+    mock_good_conn.closed = False
+    mock_good_conn.cursor.return_value.execute.return_value = None  # SELECT 1 ok
+
+    with patch.object(flask_app.db_pool, 'getconn', side_effect=[mock_bad_conn, mock_good_conn]):
+        with patch.object(flask_app.db_pool, 'putconn'):
+            with patch.object(flask_app, '_recriar_pool'):
+                conn = flask_app.get_db_connection()
+                assert conn == mock_good_conn
+
+
+def test_get_db_connection_lanca_excecao_se_pool_recriado_e_conn_invalida():
+    """get_db_connection lança excepção se nova conexão após pool recriar também falha."""
+    mock_bad_conn = MagicMock()
+    mock_bad_conn.closed = False
+    mock_bad_conn.cursor.return_value.execute.side_effect = psycopg2.OperationalError("idle")
+
+    mock_bad_conn2 = MagicMock()
+    mock_bad_conn2.closed = False
+    mock_bad_conn2.cursor.return_value.execute.side_effect = Exception("ainda offline")
+
+    with patch.object(flask_app.db_pool, 'getconn', side_effect=[mock_bad_conn, mock_bad_conn2]):
+        with patch.object(flask_app.db_pool, 'putconn'):
+            with patch.object(flask_app, '_recriar_pool'):
+                with pytest.raises(psycopg2.OperationalError):
+                    flask_app.get_db_connection()
