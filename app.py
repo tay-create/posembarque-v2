@@ -84,7 +84,12 @@ def allowed_file(filename):
 
 @app.before_request
 def verificar_timeout_sessao():
-    """Faz refresh da sessão a cada request. TV tem lifetime de 30 dias; outros 8h."""
+    """Renova a sessão em cada request. TV=30 dias, outros=8h.
+
+    Nota: app.permanent_session_lifetime é mutado por request. Seguro com
+    gunicorn sync workers (single-threaded, requests sequenciais). Não usar
+    com workers threaded (gevent/eventlet/gthread).
+    """
     if session.get('_user_id'):
         nivel = session.get('user_cache', {}).get('nivel')
         if nivel == 'tv':
