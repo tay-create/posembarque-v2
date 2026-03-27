@@ -44,7 +44,7 @@ PG_CONFIG = {
     'password': os.environ.get('DB_PASSWORD', '')
 }
 app.secret_key = os.environ.get('SECRET_KEY', '')
-app.permanent_session_lifetime = timedelta(hours=8)
+app.permanent_session_lifetime = timedelta(days=30)
 app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_NAME'] = 'posembarque_session'
@@ -84,18 +84,8 @@ def allowed_file(filename):
 
 @app.before_request
 def verificar_timeout_sessao():
-    """Renova a sessão em cada request. TV=30 dias, outros=8h.
-
-    Nota: app.permanent_session_lifetime é mutado por request. Seguro com
-    gunicorn sync workers (single-threaded, requests sequenciais). Não usar
-    com workers threaded (gevent/eventlet/gthread).
-    """
+    """Renova a sessão a cada request — sem logout automático por inatividade."""
     if session.get('_user_id'):
-        nivel = session.get('user_cache', {}).get('nivel')
-        if nivel == 'tv':
-            app.permanent_session_lifetime = timedelta(days=30)
-        else:
-            app.permanent_session_lifetime = timedelta(hours=8)
         session.modified = True
 
 @app.after_request
