@@ -12,7 +12,6 @@ import psycopg2.extras
 import psycopg2.pool
 import pandas as pd
 from datetime import datetime, timedelta
-import shutil
 import os
 import json
 import secrets
@@ -49,7 +48,7 @@ app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_NAME'] = 'posembarque_session'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['DEBUG'] = False
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB limite de upload
@@ -601,15 +600,17 @@ def dashboard():
         cor = "orange"; texto = r['situacao']; peso = 2
         if status == "RESOLVIDO": cor = "green"; metricas['resolvidas'] += 1; peso = 3
         else:
-            e_atrasado = False
+            horas_passadas = 0
             try:
                 dt_str = r['data_ocorrencia']; hr_str = r['hora_ocorrencia']
                 if '-' in dt_str: d = datetime.strptime(dt_str, "%Y-%m-%d")
                 else: d = datetime.strptime(dt_str, "%d/%m/%Y")
                 if hr_str and ':' in hr_str: h,m = map(int, hr_str.split(':')); d = d.replace(hour=h, minute=m)
-                if (agora - d) > timedelta(hours=24): e_atrasado = True
+                horas_passadas = int((agora - d).total_seconds() / 3600)
             except Exception as e: logger.warning(f"Erro ao parsear data ocorrência: {e}")
-            if e_atrasado: cor = "red"; texto = "JÁ PASSOU 24H"; metricas['atrasadas'] += 1; peso = 1
+            if horas_passadas >= 24:
+                multiplo = (horas_passadas // 24) * 24
+                cor = "red"; texto = f"JÁ PASSOU {multiplo}H"; metricas['atrasadas'] += 1; peso = 1
             else: metricas['andamento'] += 1; peso = 2
         r['cor_card'] = cor; r['status_display'] = texto; r['peso'] = peso; dados_processados.append(r)
 
@@ -945,11 +946,6 @@ def login():
                 'id': user_data['username'], 'nome': user_data['nome'],
                 'nivel': user_data['nivel'], 'email': user_data['email']
             }
-            if not is_tv:
-                if not remember_me:
-                    session['ultima_atividade'] = datetime.now(BRT).isoformat()
-                else:
-                    session['manter_conectado'] = True
             session['acabou_de_logar'] = True
             return redirect(url_for('dashboard'))
         else: flash('Usuário ou Senha incorretos.', 'login')
@@ -1062,7 +1058,7 @@ def cadastro():
     cur.execute("SELECT DISTINCT motivo FROM ocorrencias WHERE motivo IS NOT NULL ORDER BY motivo")
     motivos = [r['motivo'] for r in cur.fetchall()]
     release_db_connection(conn)
-    return render_template('cadastro.html', motoristas=motoristas, clientes=clientes, motivos=motivos)
+    return render_template('cadastro.html', motoristas=motoristas, clientes=clientes, motivos=motivos, sucesso=request.args.get('sucesso'))
 
 @app.route('/salvar', methods=['POST'])
 @login_required
@@ -1249,15 +1245,17 @@ def atualizar_cards():
         cor = "orange"; texto = r['situacao']; peso = 2
         if status == "RESOLVIDO": cor = "green"; metricas['resolvidas'] += 1; peso = 3
         else:
-            atrasado = False
+            horas_passadas = 0
             try:
                 dt_str = r['data_ocorrencia']; hr_str = r['hora_ocorrencia']
                 if '-' in dt_str: d = datetime.strptime(dt_str, "%Y-%m-%d")
                 else: d = datetime.strptime(dt_str, "%d/%m/%Y")
                 if hr_str and ':' in hr_str: h,m = map(int, hr_str.split(':')); d = d.replace(hour=h, minute=m)
-                if (agora - d) > timedelta(hours=24): atrasado = True
+                horas_passadas = int((agora - d).total_seconds() / 3600)
             except Exception as e: logger.warning(f"Erro ao parsear data: {e}")
-            if atrasado: cor = "red"; texto = "JÁ PASSOU 24H"; metricas['atrasadas'] += 1; peso = 1
+            if horas_passadas >= 24:
+                multiplo = (horas_passadas // 24) * 24
+                cor = "red"; texto = f"JÁ PASSOU {multiplo}H"; metricas['atrasadas'] += 1; peso = 1
             else: metricas['andamento'] += 1; peso = 2
         r['cor_card'] = cor; r['status_display'] = texto; r['peso'] = peso; dados_processados.append(r)
 
