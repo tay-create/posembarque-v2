@@ -84,8 +84,10 @@ def allowed_file(filename):
 @app.before_request
 def verificar_timeout_sessao():
     """Renova a sessão a cada request — sem logout automático por inatividade."""
-    if session.get('_user_id'):
+    user_id = session.get('_user_id')
+    if user_id:
         session.modified = True
+        logger.info(f"[SESSION] request={request.path} user={user_id} auth={current_user.is_authenticated}")
 
 @app.after_request
 def set_security_headers(response):
