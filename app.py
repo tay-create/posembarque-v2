@@ -42,7 +42,12 @@ PG_CONFIG = {
     'user': os.environ.get('DB_USER', 'postgres'),
     'password': os.environ.get('DB_PASSWORD', '')
 }
-app.secret_key = os.environ.get('SECRET_KEY', '')
+_secret = os.environ.get('SECRET_KEY', '')
+if not _secret:
+    logger.error("SECRET_KEY não carregada! Sessões serão inválidas.")
+else:
+    logger.info(f"SECRET_KEY carregada OK (len={len(_secret)})")
+app.secret_key = _secret
 app.permanent_session_lifetime = timedelta(days=30)
 app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
