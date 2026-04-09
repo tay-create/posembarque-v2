@@ -58,7 +58,14 @@ app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_NAME'] = 'posembarque_session'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'None'
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_PATH'] = '/posembarque'
+app.config['REMEMBER_COOKIE_NAME'] = 'posembarque_remember'
+app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
+app.config['REMEMBER_COOKIE_PATH'] = '/posembarque'
 app.config['DEBUG'] = False
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB limite de upload
 
@@ -95,8 +102,11 @@ def allowed_file(filename):
 @app.before_request
 def verificar_timeout_sessao():
     """Renova a sessão a cada request — sem logout automático por inatividade."""
-    if session.get('_user_id'):
+    user_id = session.get('_user_id')
+    if user_id:
         session.modified = True
+    elif request.cookies.get('posembarque_session') and request.endpoint not in ('login', 'static', None):
+        logger.warning(f"[SESSION-LOST] cookie presente mas _user_id ausente path={request.path} endpoint={request.endpoint}")
 
 @app.after_request
 def set_security_headers(response):
