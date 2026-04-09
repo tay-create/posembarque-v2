@@ -57,15 +57,13 @@ app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_NAME'] = 'posembarque_session'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_PATH'] = '/posembarque'
 app.config['REMEMBER_COOKIE_NAME'] = 'posembarque_remember'
-app.config['REMEMBER_COOKIE_SECURE'] = True
+app.config['REMEMBER_COOKIE_SECURE'] = False
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
-app.config['REMEMBER_COOKIE_PATH'] = '/posembarque'
 app.config['DEBUG'] = False
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB limite de upload
 
