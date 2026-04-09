@@ -22,6 +22,7 @@
         </div>
 
         <form action="{{ url_for('atualizar', id=dado.id) }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <input type="hidden" name="responsavel" value="{{ dado.responsavel }}">
 

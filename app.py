@@ -2,6 +2,8 @@ import math
 import logging
 import subprocess
 import imghdr
+import threading
+import hashlib
 from zoneinfo import ZoneInfo
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -17,6 +19,7 @@ import json
 import secrets
 import bcrypt
 from flask_mail import Mail, Message
+from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 
 BRT = ZoneInfo('America/Sao_Paulo')
@@ -43,10 +46,11 @@ PG_CONFIG = {
     'password': os.environ.get('DB_PASSWORD', '')
 }
 _secret = os.environ.get('SECRET_KEY', '')
-if not _secret:
-    logger.error("SECRET_KEY não carregada! Sessões serão inválidas.")
-else:
-    logger.info(f"SECRET_KEY carregada OK (len={len(_secret)})")
+if not _secret or len(_secret) < 32:
+    raise RuntimeError(
+        "SECRET_KEY não definida ou demasiado curta (mín. 32 caracteres). "
+        "Verifique o ficheiro .env antes de iniciar o servidor."
+    )
 app.secret_key = _secret
 app.permanent_session_lifetime = timedelta(days=30)
 app.config['APPLICATION_ROOT'] = '/posembarque'
@@ -69,6 +73,7 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER'] = ('Suporte Transnet', app.config['MAIL_USERNAME'])
 
 mail = Mail(app)
+csrf = CSRFProtect(app)
 
 limiter = Limiter(
     get_remote_address,
@@ -89,10 +94,8 @@ def allowed_file(filename):
 @app.before_request
 def verificar_timeout_sessao():
     """Renova a sessão a cada request — sem logout automático por inatividade."""
-    user_id = session.get('_user_id')
-    if user_id:
+    if session.get('_user_id'):
         session.modified = True
-        logger.info(f"[SESSION] request={request.path} user={user_id} auth={current_user.is_authenticated}")
 
 @app.after_request
 def set_security_headers(response):
@@ -115,12 +118,12 @@ class User(UserMixin):
 @login_manager.user_loader
 def load_user(user_id):
     conn = None
+    cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("SELECT * FROM usuarios WHERE username = %s", (user_id,))
         u = cur.fetchone()
-        cur.close()
         if u:
             session['user_cache'] = {
                 'id': u['username'], 'nome': u['nome'],
@@ -138,6 +141,11 @@ def load_user(user_id):
             return User(cache['id'], cache['nome'], cache['nivel'], cache.get('email'))
         return None
     finally:
+        if cur:
+            try:
+                cur.close()
+            except Exception:
+                pass
         if conn:
             release_db_connection(conn)
 
@@ -148,16 +156,26 @@ db_pool = psycopg2.pool.SimpleConnectionPool(
     minconn=1, maxconn=10,
     **PG_CONFIG
 )
+_pool_lock = threading.Lock()
 
 def _recriar_pool():
-    """Recria o pool quando as conexões estiverem mortas."""
+    """Recria o pool quando as conexões estiverem mortas (thread-safe)."""
     global db_pool
+    with _pool_lock:
+        try:
+            db_pool.closeall()
+        except Exception:
+            pass
+        logger.warning("Pool de conexões recriado após falha de conexão idle.")
+        db_pool = psycopg2.pool.SimpleConnectionPool(minconn=1, maxconn=10, **PG_CONFIG)
+
+def _ping_conn(conn):
+    """Testa se a conexão está viva. Fecha o cursor após o teste."""
+    ping_cur = conn.cursor()
     try:
-        db_pool.closeall()
-    except Exception:
-        pass
-    logger.warning("Pool de conexões recriado após falha de conexão idle.")
-    db_pool = psycopg2.pool.SimpleConnectionPool(minconn=1, maxconn=10, **PG_CONFIG)
+        ping_cur.execute("SELECT 1")
+    finally:
+        ping_cur.close()
 
 def get_db_connection():
     """Retorna conexão válida do pool, reconectando automaticamente se necessário."""
@@ -168,7 +186,7 @@ def get_db_connection():
             raise psycopg2.OperationalError("Conexão fechada.")
         # Ping leve para detectar conexões idle expiradas pelo PostgreSQL
         try:
-            conn.cursor().execute("SELECT 1")
+            _ping_conn(conn)
         except (psycopg2.OperationalError, psycopg2.InterfaceError):
             try:
                 db_pool.putconn(conn)
@@ -182,7 +200,7 @@ def get_db_connection():
         _recriar_pool()
         conn = db_pool.getconn()
         try:
-            conn.cursor().execute("SELECT 1")
+            _ping_conn(conn)
         except Exception as e2:
             raise psycopg2.OperationalError(f"Pool recriado mas conexão ainda inválida: {e2}")
         conn.cursor_factory = psycopg2.extras.RealDictCursor
@@ -984,10 +1002,11 @@ def esqueci_senha():
 
         if user:
             token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
             expiracao = (datetime.now() + timedelta(minutes=10)).strftime("%Y-%m-%d %H:%M:%S")
 
             cur.execute("UPDATE usuarios SET token_reset = %s, token_expiracao = %s WHERE username = %s",
-                         (token, expiracao, username))
+                         (token_hash, expiracao, username))
             conn.commit()
             release_db_connection(conn)
 
@@ -1016,9 +1035,10 @@ def esqueci_senha():
 
 @app.route('/resetar_senha/<token>', methods=['GET', 'POST'])
 def resetar_senha(token):
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM usuarios WHERE token_reset = %s", (token,))
+    cur.execute("SELECT * FROM usuarios WHERE token_reset = %s", (token_hash,))
     user = cur.fetchone()
 
     if not user:

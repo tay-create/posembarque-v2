@@ -34,6 +34,7 @@
         {% endwith %}
 
         <form method="POST" class="space-y-4" onsubmit="return validarSenha()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label class="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1">Nova Senha</label>
                 <div class="relative">
