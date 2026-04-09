@@ -73,6 +73,7 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER'] = ('Suporte Transnet', app.config['MAIL_USERNAME'])
 
 mail = Mail(app)
+app.config['WTF_CSRF_TIME_LIMIT'] = None  # token não expira enquanto a sessão estiver ativa
 csrf = CSRFProtect(app)
 
 limiter = Limiter(
