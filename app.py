@@ -19,7 +19,7 @@ import json
 import secrets
 import bcrypt
 from flask_mail import Mail, Message
-from flask_wtf.csrf import CSRFProtect
+# CSRF removido — proteção feita por Cloudflare + SameSite=Lax
 from dotenv import load_dotenv
 
 BRT = ZoneInfo('America/Sao_Paulo')
@@ -78,8 +78,7 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER'] = ('Suporte Transnet', app.config['MAIL_USERNAME'])
 
 mail = Mail(app)
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # token não expira enquanto a sessão estiver ativa
-csrf = CSRFProtect(app)
+# CSRF desativado
 
 limiter = Limiter(
     get_remote_address,

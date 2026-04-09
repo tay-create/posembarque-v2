@@ -36,7 +36,6 @@
 
                 {% if c.status == 'ABERTO' %}
                 <form action="{{ url_for('resolver_chamado', id=c.id) }}" method="POST" class="mt-4 border-t border-slate-700 pt-4">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <label class="block text-[10px] font-bold text-slate-500 uppercase mb-2">Sua Resposta / Solução</label>
                     <textarea name="resposta" required rows="2" class="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-xl mb-3 focus:border-green-500 outline-none text-sm"></textarea>
                     <button type="submit" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center gap-2">

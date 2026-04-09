@@ -36,7 +36,6 @@
         </div>
 
         <form action="{{ url_for('salvar') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div>
                 <label class="block text-xs font-bold text-slate-400 mb-1 uppercase">Data Ocorrência</label>
