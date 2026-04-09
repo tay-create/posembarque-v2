@@ -55,11 +55,11 @@ app.secret_key = _secret
 app.permanent_session_lifetime = timedelta(days=30)
 app.config['APPLICATION_ROOT'] = '/posembarque'
 app.config['PREFERRED_URL_SCHEME'] = 'https'
-app.config['SESSION_COOKIE_NAME'] = 'posembarque_session'
+app.config['SESSION_COOKIE_NAME'] = 'psemb_s'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['REMEMBER_COOKIE_NAME'] = 'posembarque_remember'
+app.config['REMEMBER_COOKIE_NAME'] = 'psemb_r'
 app.config['REMEMBER_COOKIE_SECURE'] = False
 app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
@@ -103,7 +103,7 @@ def verificar_timeout_sessao():
     user_id = session.get('_user_id')
     if user_id:
         session.modified = True
-    elif request.cookies.get('posembarque_session') and request.endpoint not in ('login', 'static', None):
+    elif request.cookies.get('psemb_s') and request.endpoint not in ('login', 'static', None):
         cookie_val = request.cookies.get('posembarque_session', '')[:50]
         sess_keys = list(session.keys()) if session else []
         logger.warning(f"[SESSION-LOST] path={request.path} session_keys={sess_keys} cookie_start={cookie_val} proto={request.scheme} host={request.host}")
