@@ -106,7 +106,9 @@ def verificar_timeout_sessao():
     if user_id:
         session.modified = True
     elif request.cookies.get('posembarque_session') and request.endpoint not in ('login', 'static', None):
-        logger.warning(f"[SESSION-LOST] cookie presente mas _user_id ausente path={request.path} endpoint={request.endpoint}")
+        cookie_val = request.cookies.get('posembarque_session', '')[:50]
+        sess_keys = list(session.keys()) if session else []
+        logger.warning(f"[SESSION-LOST] path={request.path} session_keys={sess_keys} cookie_start={cookie_val} proto={request.scheme} host={request.host}")
 
 @app.after_request
 def set_security_headers(response):
