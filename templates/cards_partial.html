@@ -83,33 +83,17 @@
                 </div>
             {% endif %}
 
-            {% if current_user.nivel in ['gerencial', 'desenvolvedor'] %}
+            <div class="flex gap-2">
+                <a href="{{ url_for('editar', id=row.id) }}" class="flex-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 py-2 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-1 hover:bg-blue-500/20 transition-all">
+                    <i data-lucide="pencil" size="12"></i> Editar
+                </a>
 
-                <div class="flex gap-2">
-                    <a href="{{ url_for('editar', id=row.id) }}" class="flex-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 py-2 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-1 hover:bg-blue-500/20 transition-all">
-                        <i data-lucide="pencil" size="12"></i> Editar
-                    </a>
-
-                    <button onclick="excluirOcorrencia({{ row.id }})" class="p-2 rounded-lg text-red-500 hover:bg-red-500/20 hover:text-red-400 transition-all" title="Excluir Definitivamente">
-                        <i data-lucide="trash-2" size="18"></i>
-                    </button>
-                </div>
-
-            {% elif current_user.nivel == 'operacional' %}
-                {% if row.status_edicao == 'AUTORIZADO' %}
-                    <a href="{{ url_for('editar', id=row.id) }}" class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 py-2 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-1">
-                        <i data-lucide="unlock" size="12"></i> Editar Liberado
-                    </a>
-                {% elif row.status_edicao == 'SOLICITADO' %}
-                    <div class="bg-slate-700/50 text-slate-500 py-2 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-1 cursor-wait">
-                        <i data-lucide="clock" size="12"></i> Aguardando
-                    </div>
-                {% else %}
-                    <button onclick="abrirModalSolicitacao({{ row.id }})" class="bg-slate-900 text-slate-400 border border-slate-700 py-2 rounded-lg text-[10px] font-black uppercase flex items-center justify-center gap-1 w-full hover:bg-slate-800 transition-all">
-                        <i data-lucide="lock" size="12"></i> Solicitar
-                    </button>
+                {% if current_user.nivel in ['gerencial', 'desenvolvedor'] %}
+                <button onclick="excluirOcorrencia({{ row.id }})" class="p-2 rounded-lg text-red-500 hover:bg-red-500/20 hover:text-red-400 transition-all" title="Excluir Definitivamente">
+                    <i data-lucide="trash-2" size="18"></i>
+                </button>
                 {% endif %}
-            {% endif %}
+            </div>
 
         </div>
     {% endif %}

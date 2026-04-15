@@ -1132,15 +1132,9 @@ def editar(id):
     cur.execute("SELECT * FROM ocorrencias WHERE id = %s", (id,))
     dado = cur.fetchone()
 
-    permissao = False
-    if current_user.nivel in ['gerencial', 'desenvolvedor']:
-        permissao = True
-    elif current_user.nivel == 'operacional' and dado['status_edicao'] == 'AUTORIZADO':
-        permissao = True
-
-    if not permissao:
+    if not dado:
         release_db_connection(conn)
-        return "<script>alert('Acesso negado ou autorização pendente.'); window.history.back();</script>"
+        return "<script>alert('Ocorrência não encontrada.'); window.history.back();</script>"
 
     cur2 = conn.cursor()
     cur2.execute("SELECT nome FROM motoristas ORDER BY nome")
@@ -1157,19 +1151,6 @@ def editar(id):
 def atualizar(id):
     conn = get_db_connection()
 
-    cur = conn.cursor()
-    cur.execute("SELECT status_edicao FROM ocorrencias WHERE id = %s", (id,))
-    checar = cur.fetchone()
-    permissao = False
-
-    if current_user.nivel in ['gerencial', 'desenvolvedor']:
-        permissao = True
-    elif current_user.nivel == 'operacional' and checar['status_edicao'] == 'AUTORIZADO':
-        permissao = True
-
-    if not permissao:
-        release_db_connection(conn)
-        return "Acesso negado para salvar esta edição."
 
     try:
         data = request.form.get('data'); motorista = request.form.get('motorista')
